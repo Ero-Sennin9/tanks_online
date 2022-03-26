@@ -5,11 +5,11 @@ import pygame
 import os
 import json
 import pygame as pg
-
+from settings import SERVER_HOST, SERVER_PORT
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-sock.connect(('localhost', 10000))
+sock.connect((SERVER_HOST, int(SERVER_PORT)))
 
 all_sprites = pg.sprite.Group()  # создание групп спрайтов для каждого типа объектов
 players = pg.sprite.Group()

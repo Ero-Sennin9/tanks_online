@@ -7,9 +7,10 @@ import random
 import pygame.sprite
 import os
 import math
+from settings import SERVER_HOST, SERVER_PORT
 main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 main_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-main_socket.bind(('localhost', 10000))
+main_socket.bind((SERVER_HOST, int(SERVER_PORT)))
 main_socket.setblocking(0)
 main_socket.listen(5)
 id_players = 1
@@ -607,6 +608,6 @@ while running:
     for player0 in players:
         player0.rock_colision()
     clock.tick(FPS)
-    pg.display.flip()  # обновление дисплея
+    # pg.display.flip()  # обновление дисплея
 
 
