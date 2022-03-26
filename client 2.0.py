@@ -492,7 +492,7 @@ while running:
     # text_x, text_y = text.get_width() // 2, text.get_height() // 2  # размещение текста в верхнем левом углу
     # screen.blit(text, (text_x, text_y))  # отображение текста
     players.update(), patrons.update()  # обновление спрайтов(анимация, движение, взрывы, обновление полоски здоровья)
-    if time % 3 == 1:
+    if time % 2 == 0:
         boom.update()
         fires.update()
     clock.tick(FPS)

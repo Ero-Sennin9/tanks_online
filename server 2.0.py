@@ -18,7 +18,7 @@ main_socket.listen(5)
 id_players = 1
 
 
-FPS = 240  # настройки pygame
+FPS = 120  # настройки pygame
 x = 100
 y = 45
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
@@ -27,13 +27,13 @@ pg.init()
 SIZE = WIDTH, HEIGHT = 1500, 700
 screen = pg.display.set_mode(SIZE)
 clock = pg.time.Clock()
-SPEED_TANK = 2.5  # максимальная скорость танка
-SPEED_PATRON = 6.8  # скорость патрона
-TANK_A0 = 0.08
+SPEED_TANK = 4.2  # максимальная скорость танка
+SPEED_PATRON = 20  # скорость патрона
+TANK_A0 = 0.16
 TANK_A = round(TANK_A0, 1)  # ускорение танка при нажатии на кнопки движения
 GRASS_STONES = (80, 80)  # размер камней и травы
 RELOAD = 4  # время перезарядки
-SLOWING = 2
+SLOWING = 4
 fire = False  # наличие огня
 
 all_sprites = pg.sprite.Group()  # создание групп спрайтов для каждого типа объектов
