@@ -373,7 +373,6 @@ class Patron(pg.sprite.Sprite):
 
         if pg.sprite.spritecollide(self, rocks, dokill=False,
                                    collided=pygame.sprite.collide_mask):  # столкновение с камнем
-            pygame.mixer.Sound('sounds/rock_boom.mp3').play()
             Boom(*self.rect.center)  # взрыв пули
             self.kill()  # уничтожение пули
         if self.rect.centerx >= WIDTH + self.rect.width or self.rect.centerx <= -self.rect.width:  # уничтожение пули при вылете за границы для оптимизации игры
