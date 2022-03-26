@@ -5,9 +5,11 @@ import time
 import pygame as pg
 import random
 import pygame.sprite
-import os
 import math
 from settings import SERVER_HOST, SERVER_PORT
+import os
+os.environ["SDL_VIDEODRIVER"] = "dummy"
+
 main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 main_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 main_socket.bind((SERVER_HOST, int(SERVER_PORT)))
@@ -42,19 +44,6 @@ patrons = pg.sprite.Group()
 boom = pg.sprite.Group()
 health = pg.sprite.Group()
 fires = pg.sprite.Group()
-
-
-boom_sound1 = pygame.mixer.Sound('sounds/boom.mp3')  # звуки
-boom_sound2 = pygame.mixer.Sound('sounds/probitie1.mp3')
-boom_sound3 = pygame.mixer.Sound('sounds/probitie-2.mp3')
-rik_sound1 = pygame.mixer.Sound('sounds/rikoshet.mp3')
-rik_sound2 = pygame.mixer.Sound('sounds/rikoshet1.mp3')
-game_over = pygame.mixer.Sound('sounds/tank-unichtozhen.mp3')
-pojar = pygame.mixer.Sound('sounds/pojar.mp3')
-# boom_sounds = list(
-#     [pygame.mixer.Channel(1), pygame.mixer.Channel(2)])  # списки для хранения каналов для воспроизведения
-# rik_sounds = list([pygame.mixer.Channel(3), pygame.mixer.Channel(4)])
-pojar_channel = pygame.mixer.Channel(0)
 
 
 players_inf = {}  # хранение спрайтов игроков вместе с id
@@ -158,7 +147,6 @@ class Fire(AnimatedSprite):  # анимация пожара
         if self.time <= 0:  # уничтожение спрайта, если эффект окончен
             self.kill()
             fire = False
-            pojar_channel.pause()  # остановка пожара
         self.image = self.frames[self.cur_frame]
         self.player.damage(0.089)  # урон от пожара
 
@@ -230,8 +218,6 @@ class Tank(pg.sprite.Sprite):  # класс танка
         self.reload_center = (75, 38)  # центр значка перезарядки относительно центра танка
         self.time = time
         self.colision = False
-        self.boom_sounds = pygame.mixer.Channel(1)
-        self.rik_sounds = pygame.mixer.Channel(2)
         self.player_inf = {'pos': self.first_position, # информация, идущая на сервер
                            'shoot': [None, None]}
 
@@ -367,9 +353,6 @@ class Patron(pg.sprite.Sprite):
                     if self.collide_with_tank:
                         elem.damage(self.dam)  # нанесение урона при обратном
                         if self.dam >= 20:  # попадание по танку
-                            sound = boom_sound2 if random.randint(1, 2) == 2 else boom_sound3
-                            elem.boom_sounds.queue(boom_sound1), elem.boom_sounds.queue(
-                                sound)  # звук взрыва
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
                             if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
@@ -379,8 +362,6 @@ class Patron(pg.sprite.Sprite):
                                 elem.fire = [True, time_fire]
 
                         else:  # если произошел рикошет - меняем направление пули
-                            elem.rik_sounds.queue(rik_sound1), elem.rik_sounds.queue(
-                                rik_sound2)  # звук рикошет
                             angle = self.angle_rik
                             self.speed = (math.sin(math.radians(angle)) * SPEED_PATRON,
                                           -math.cos(math.radians(angle)) * SPEED_PATRON)
@@ -507,7 +488,7 @@ while running:
         new_socket, addr = main_socket.accept()
         print('Подключился', addr)
         new_socket.setblocking(0)
-        players_information.append([id_players, new_socket, None])
+        players_information.append([id_players, new_socket, 0, None])
         json1 = {'id': id_players,
                  'generation': data_rocks_grass,
                  'pos': positions[id_players % 4],
@@ -526,7 +507,7 @@ while running:
 
     for data1 in players_information:  # получение информации от пользователей и иx обработка
         try:
-            id, new_socket, data = data1
+            id, new_socket, errors, data = data1
             info = data1[1].recv(2 ** 20)
             data1[-1] = json.loads(info.decode())
         except Exception:
@@ -581,24 +562,26 @@ while running:
             sock.send(json.dumps(pole_info).encode())
             pass
         except Exception:
-            players_inf[data2[0]].kill()
-            del pole_info['players'][data2[0]]
-            del players_inf[data2[0]]
-            players_information.remove(data2)
-            sock.close()
-            print('Отключился')
+            data2[2] += 1
+            if data2[2] == 3000:
+                players_inf[data2[0]].kill()
+                del pole_info['players'][data2[0]]
+                del players_inf[data2[0]]
+                players_information.remove(data2)
+                sock.close()
+                print('Отключился')
 
-    screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
-    patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
-    if not game:  # если игра окончена, выводится сообщение с результатом
-        text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
-        text2 = font2.render('Нажмите p для перезапуска', True, pygame.Color('yellow'))
-        text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        screen.blit(text, (text_x, text_y))  # отображение текста
-        screen.blit(text2, (text_x, text_y + 50))
-    else:
-        result = []
+    # screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
+    # patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
+    # if not game:  # если игра окончена, выводится сообщение с результатом
+    #     text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
+    #     text2 = font2.render('Нажмите p для перезапуска', True, pygame.Color('yellow'))
+    #     text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
+    #     text_y = HEIGHT // 2 - text.get_height() // 2
+    #     screen.blit(text, (text_x, text_y))  # отображение текста
+    #     screen.blit(text2, (text_x, text_y + 50))
+    # else:
+    #     result = []
     # text = font.render(f'{score[0]} : {score[1]}', True, pygame.Color('green'))  # рендер текста
     # text_x, text_y = text.get_width() // 2, text.get_height() // 2  # размещение текста в верхнем левом углу
     # screen.blit(text, (text_x, text_y))  # отображение текста

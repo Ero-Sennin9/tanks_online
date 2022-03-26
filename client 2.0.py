@@ -2,10 +2,10 @@ import socket
 import sys
 import math, random
 import pygame
-import os
 import json
 import pygame as pg
 from settings import SERVER_HOST, SERVER_PORT
+import os
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
