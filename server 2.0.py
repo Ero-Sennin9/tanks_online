@@ -8,14 +8,16 @@ import pygame.sprite
 import math
 from settings import SERVER_HOST, SERVER_PORT
 import os
-os.environ["SDL_VIDEODRIVER"] = "dummy"
+# os.environ["SDL_VIDEODRIVER"] = "dummy"  # на сервере нет дисплея
 
-main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # настройка сервера
 main_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 main_socket.bind((SERVER_HOST, int(SERVER_PORT)))
 main_socket.setblocking(0)
 main_socket.listen(5)
-id_players = 1
+
+
+id_players = 1   # id одключающихся игроков
 
 
 FPS = 120  # настройки pygame
@@ -46,9 +48,8 @@ health = pg.sprite.Group()
 fires = pg.sprite.Group()
 
 
-players_inf = {}  # хранение спрайтов игроков вместе с id
-pole_info = {'players': {},
-             'patrons': []}   # информация о состоянии игры для отправки
+players_inf = {}  # хранение спрайтов игроков с ключом по id
+pole_info = {'players': {}}   # информация о состоянии игры для отправки
 
 
 def angle_p(vec):  # рассчет угла поворота исходя из вектора скорости
@@ -192,7 +193,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
     pictures = [pygame.transform.scale(load_image('tank1.png'), (40, 55)),
             pygame.transform.scale(load_image('tank2.png'), (40, 55)),
             pygame.transform.scale(load_image('tank1.png'), (40, 55)),
-            pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений двух игроков
+            pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений игроков
 
     def __init__(self, pos, rotation, player, control, time, shoot_button):
         super().__init__(players)
@@ -203,7 +204,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
         self.control = control  # клавиши для управления танком
         self.image = pygame.transform.rotate(self.pictures[player - 1],
                                              360 - rotation)  # картинки для спрайтов исходя из номера игрока
-        self.fire = [False, None]
+        self.fire = [False, None]  # информация об анимации пожара для передачи
         self.image2 = self.pictures[player - 1]  # а также поворот картинки
         self.mask = pygame.mask.from_surface(self.image)  # создание маски
         self.rect = self.image.get_rect()
@@ -220,63 +221,8 @@ class Tank(pg.sprite.Sprite):  # класс танка
         self.colision = False
         self.player_inf = {'pos': self.first_position, # информация, идущая на сервер
                            'shoot': [None, None]}
-
-    def change_id(self, id_player):
-        self.player = id_player
-        self.image = pygame.transform.rotate(self.pictures[(self.player - 1) % 4],
-                                             360 - self.rotation)  # картинки для спрайтов исходя из номера игрока
-        self.image2 = self.pictures[(self.player - 1) % 4]  # а также поворот картинки
-
-    def move(self, events):  # управление танком
-        for i in events:
-            if i.type == pg.KEYDOWN or i.type == pg.KEYUP:  # при удерживании кнопки управления танком значение передвижения в данном направлении становится True
-                if i.key == self.control[0]:
-                    self.data[0] = not self.data[0]
-                if i.key == self.control[1]:
-                    self.data[1] = not self.data[1]
-                if i.key == self.control[2]:
-                    self.data[2] = not self.data[2]
-                if i.key == self.control[3]:
-                    self.data[3] = not self.data[3]
-        self.velocity = [round(self.velocity[0], 1), round(self.velocity[1],
-                                                           1)]  # округление скоростей, так как почему-то в процессе прибавления и убавления они изменяются
-        if self.data[0] and self.velocity[1] > -SPEED_TANK:  # ускорение танка в соответсвии с удерживаемыми кнопками
-            self.velocity[1] -= TANK_A
-        elif self.velocity[1] < 0:
-            self.velocity[1] += TANK_A
-        if self.data[1] and self.velocity[0] < SPEED_TANK:
-            self.velocity[0] += TANK_A
-        elif self.velocity[0] > 0:
-            self.velocity[0] -= TANK_A
-        if self.data[2] and self.velocity[1] < SPEED_TANK:  # и, следовательно, замедление в случае отпускания кнопок
-            self.velocity[1] += TANK_A
-        elif self.velocity[1] > 0:
-            self.velocity[1] -= TANK_A
-        if self.data[3] and self.velocity[0] > -SPEED_TANK:
-            self.velocity[0] -= TANK_A
-        elif self.velocity[0] < 0:
-            self.velocity[0] += TANK_A
-
-        if angle_p(self.velocity) != None and any(self.data):  # поворот танка исходя из вектора скорости
-            self.rotate(angle_p(self.velocity))
-
-        if self.rect.centerx >= WIDTH - 20 and self.velocity[0] > 0:  # танк не может уйти за границы карты
-            self.velocity[0] = 0
-        elif self.rect.centery >= HEIGHT - 20 and self.velocity[1] > 0:
-            self.velocity[1] = 0
-        if self.rect.centerx <= 20 and self.velocity[0] < 0:
-            self.velocity[0] = 0
-        elif self.rect.centery <= 20 and self.velocity[1] < 0:
-            self.velocity[1] = 0
-
-        self.rect.move_ip(self.velocity[0] / self.slowing,
-                          self.velocity[1] / self.slowing)  # передвижение танка с учетом замедления
-        self.mask = pg.mask.from_surface(self.image)  # обновление маски, так как он все время поворачивается
-        self.slowing = 1
-        if pg.sprite.spritecollide(self, rocks, dokill=False,
-                                   collided=pg.sprite.collide_mask):  # при столкновении с камнем снижается скорость и наносится урон
-            self.slowing = 4
-            self.damage(0.02)
+        self.time_delete_patrons = 0
+        self.time_delete_fire = 0
 
     def rotate(self, angle):  # поворот танка
         self.image = pg.transform.rotate(self.image2, 360 - angle)
@@ -294,12 +240,14 @@ class Tank(pg.sprite.Sprite):  # класс танка
     #         math.radians(self.angle)) * SPEED_PATRON  # рассчет вектора скорости пули исходя из угла поворота танка
     #     Patron((a, b), self.rect.center, self.angle, self.player)  # создание пули
 
-    def shoot_data(self, data):
-        self.time = 0
-        Patron(*data)  # создание пули
-
     def update(self):  # обновление состояние танка
         self.time += 1
+        self.time_delete_patrons += 1
+        self.time_delete_fire += 1
+        if self.time_delete_fire % 4 == 0:
+            self.fire[0] = False
+        if self.time_delete_patrons % 4 == 0:
+            pole_info['players'][self.player]['patrons'] = pole_info['players'][self.player]['patrons'][1:]
         self.health_bar.update(self)  # обновление полоски со здоровьем
         angle = (self.time / (RELOAD * FPS)) * 2 * math.pi
         pygame.draw.arc(screen, pygame.Color('blue'), (self.rect.centerx + self.reload_center[0] - 20,
@@ -323,6 +271,10 @@ class Tank(pg.sprite.Sprite):  # класс танка
                                    collided=pg.sprite.collide_mask):  # при столкновении с камнем снижается скорость и наносится урон
             self.slowing = 4
             self.damage(0.02)
+
+    def shoot_data(self, data):
+        self.time = 0
+        Patron(*data)  # создание пули
 
 
 class Patron(pg.sprite.Sprite):
@@ -360,6 +312,7 @@ class Patron(pg.sprite.Sprite):
                                 Fire(elem, time_fire)
                                 fire = True
                                 elem.fire = [True, time_fire]
+                                elem.time_delete_fire = 0
 
                         else:  # если произошел рикошет - меняем направление пули
                             angle = self.angle_rik
@@ -381,11 +334,11 @@ class Patron(pg.sprite.Sprite):
             self.kill()  # уничтожение пули
 
 
-class Tank2(pg.sprite.Sprite):  # класс танка
+class Tank2(pg.sprite.Sprite):  # класс танка для задания позиций игроков в начале игры
     data = [pygame.transform.scale(load_image('tank1.png'), (40, 55)),
             pygame.transform.scale(load_image('tank2.png'), (40, 55)),
             pygame.transform.scale(load_image('tank1.png'), (40, 55)),
-            pygame.transform.scale(load_image('tank1.png'), (40, 55))]  # загрузка изображений двух игроков
+            pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений двух игроков
 
     def __init__(self, pos, rotation):
         super().__init__(players)
@@ -446,10 +399,10 @@ class Grass(pg.sprite.Sprite):  # класс куста
 positions = []
 running = True
 generate_level(25, 25)
-data_rocks_grass = [[rock.rect.center for rock in rocks], [grass.rect.center for grass in grasses]]
+data_rocks_grass = [[rock.rect.center for rock in rocks], [grass.rect.center for grass in grasses]]  # иинформация о расположении травы и камней
 print(data_rocks_grass)
 
-while len(positions) != 4:
+while len(positions) != 4:  # позиции для расположения игроков
     el = Tank2((random.randint(100, WIDTH - 100), random.randint(100, HEIGHT - 100)), random.randint(0, 360))
     if not pg.sprite.spritecollide(el, all_sprites, dokill=False,
                                    collided=pygame.sprite.collide_circle):  # проверка на столкновение с другими объектам
@@ -459,6 +412,7 @@ while len(positions) != 4:
         el.kill()
 for player in players:
     player.kill()
+
 print(positions)
 players_information = []
 pole = load_image('pole.jpg')  # загрузка изображения игрового поля
@@ -472,10 +426,9 @@ def get_all_id(players):
 
 while running:
     ides = get_all_id(players)
-    pole_info['patrons'] = []
     pole_info['fire_sound'] = fire
-    events = pygame.event.get()
     pole_info['reload'] = False
+    events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
             running = False
@@ -484,7 +437,7 @@ while running:
             for player in players:
                 player.hp = 100
     try:
-        new_socket, addr = main_socket.accept()
+        new_socket, addr = main_socket.accept()  # подключение игрока и отправка ему данных об игре
         print('Подключился', addr)
         new_socket.setblocking(0)
         players_information.append([id_players, new_socket, 0, None])
@@ -500,7 +453,7 @@ while running:
                               'slowing': SLOWING}}
         id_players += 1
         new_socket.send(json.dumps(json1).encode())
-        time.sleep(1)
+        time.sleep(2)
     except Exception:
         pass
 
@@ -513,28 +466,30 @@ while running:
             pass
 
     info_send = list(map(lambda s: [s[0], s[-1]], players_information))
-    for id, player_info in info_send:
+    for id, player_info in info_send:  # получение информации от пользователей и иx обработка
         if player_info != None:  # получение информации от пользователей и иx обработка
-            if id not in players_inf:
+            if id not in players_inf:  # создание танка, если он отсутствует в списке
                 players_inf[id] = Tank(player_info['pos'], 90, id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a],
                                         RELOAD * FPS, pg.KEYDOWN)
-            players_inf[id].velocity = player_info['velocity']
+            players_inf[id].velocity = player_info['velocity']  # иначе - применение переданных данных об игроке
             players_inf[id].rotate(player_info['angle'])
             players_inf[id].rect.center = player_info['pos']
-            if player_info['shoot'][0]:
-                dam = random.randint(4, 10) if random.randint(1, 3) == 2 else random.randint(22, 30)  # рикошет или не рикошет + расчет урона
-                angle = (angle_p(player_info['shoot'][1][0]) + random.randint(-28, 28)) % 360
-                angle = 360 - abs(angle) if angle < 0 else angle
-                players_inf[id].shoot_data(player_info['shoot'][1] + [dam, angle])
-                pole_info['patrons'].append(player_info['shoot'][1] + [dam, angle])
-            for player in players:
-                if player.player == id:
-                    pole_info['players'][id] = {'hp': player.hp}
-                    pole_info['players'][id]['pos'] = player_info['pos']
-                    pole_info['players'][id]['angle'] = player_info['angle']
-                    pole_info['players'][id]['velocity'] = player_info['velocity']
-                    pole_info['players'][id]['fire'] = player.fire
-
+            if id not in pole_info['players']:
+                pole_info['players'][id] = {'patrons': []}
+            pole_info['players'][id]['hp'] = players_inf[id].hp  # сбор информации для отправки
+            pole_info['players'][id]['pos'] = player_info['pos']
+            pole_info['players'][id]['angle'] = player_info['angle']
+            pole_info['players'][id]['velocity'] = player_info['velocity']
+            pole_info['players'][id]['fire'] = players_inf[id].fire
+            if player_info['shoot'][0]:  # выстрел
+                if players_inf[id].time >= RELOAD * FPS:
+                    dam = random.randint(4, 10) if random.randint(1, 3) == 2 else random.randint(22, 30)  # рикошет или не рикошет + расчет урона
+                    angle = (angle_p(player_info['shoot'][1][0]) + random.randint(-28, 28)) % 360
+                    angle = 360 - abs(angle) if angle < 0 else angle
+                    data_patron = player_info['shoot'][1] + [dam, angle]
+                    players_inf[id].shoot_data(data_patron)
+                    pole_info['players'][id]['patrons'].append(data_patron)  # передача информации о пуле
+                    players_inf[id].time_delete_patrons = 0
     for player1 in players:  # обработка столкновений
         data = pygame.sprite.spritecollide(player1, players, dokill=False, collided=pygame.sprite.collide_mask)
         if len(data) > 1:
@@ -559,28 +514,26 @@ while running:
         sock = data2[1]
         try:
             sock.send(json.dumps(pole_info).encode())
-            pass
         except Exception:
             data2[2] += 1
-            if data2[2] == 3000:
+            if data2[2] == 750:
                 players_inf[data2[0]].kill()
                 del pole_info['players'][data2[0]]
                 del players_inf[data2[0]]
                 players_information.remove(data2)
                 sock.close()
                 print('Отключился')
-
-    # screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
-    # patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
-    # if not game:  # если игра окончена, выводится сообщение с результатом
-    #     text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
-    #     text2 = font2.render('Нажмите p для перезапуска', True, pygame.Color('yellow'))
-    #     text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
-    #     text_y = HEIGHT // 2 - text.get_height() // 2
-    #     screen.blit(text, (text_x, text_y))  # отображение текста
-    #     screen.blit(text2, (text_x, text_y + 50))
-    # else:
-    #     result = []
+    screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
+    patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
+    if not game:  # если игра окончена, выводится сообщение с результатом
+        text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
+        text2 = font2.render('Нажмите p для перезапуска', True, pygame.Color('yellow'))
+        text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
+        text_y = HEIGHT // 2 - text.get_height() // 2
+        screen.blit(text, (text_x, text_y))  # отображение текста
+        screen.blit(text2, (text_x, text_y + 50))
+    else:
+        result = []
     # text = font.render(f'{score[0]} : {score[1]}', True, pygame.Color('green'))  # рендер текста
     # text_x, text_y = text.get_width() // 2, text.get_height() // 2  # размещение текста в верхнем левом углу
     # screen.blit(text, (text_x, text_y))  # отображение текста
@@ -590,6 +543,7 @@ while running:
     for player0 in players:
         player0.rock_colision()
     clock.tick(FPS)
-    # pg.display.flip()  # обновление дисплея
+    pg.display.flip()
+
 
 

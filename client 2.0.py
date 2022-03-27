@@ -222,9 +222,9 @@ class Tank(pg.sprite.Sprite):  # класс танка
         self.shoot_button = shoot_button
         self.player = player  # номер игрока
         self.control = control  # клавиши для управления танком
-        self.image = pygame.transform.rotate(self.pictures[player - 1],
+        self.image = pygame.transform.rotate(self.pictures[player % 4],
                                              360 - rotation)  # картинки для спрайтов исходя из номера игрока
-        self.image2 = self.pictures[player - 1]  # а также поворот картинки
+        self.image2 = self.pictures[player % 4]  # а также поворот картинки
         self.mask = pygame.mask.from_surface(self.image)  # создание маски
         self.rect = self.image.get_rect()
         self.rect.center = pos
@@ -318,6 +318,12 @@ class Tank(pg.sprite.Sprite):  # класс танка
             math.radians(self.angle)) * SPEED_PATRON  # рассчет вектора скорости пули исходя из угла поворота танка
         self.player_inf['shoot'][1] = (a, b), self.rect.center, self.angle, self.player
 
+    def shoot_data(self, data):
+        if self.time >= RELOAD * FPS:
+            Patron(*data)  # создание пули
+            self.time = 0
+            print(data)
+
     def update(self):  # обновление состояние танка
         self.time += 1
         self.health_bar.update(self)  # обновление полоски со здоровьем
@@ -398,13 +404,13 @@ class Patron(pg.sprite.Sprite):
             self.kill()  # уничтожение пули
 
 
-player_id = 1
+player_id = 1   # позиция и id на случай, если не произойдет передачи id
 player_pos = (60, HEIGHT / 2)
 
 pole = load_image('pole.jpg')  # загрузка изображения игрового поля
 game = True  # статус игры
 font, font2 = pg.font.Font(None, 50), pg.font.Font(None, 36)  # шрифты для текста
-try:
+try:  # принятие информации о игре
     info = json.loads(sock.recv(2 ** 20).decode())
     if 'generation' in info:
         rocks_pos, grasses_pos = info['generation'][0], info['generation'][1]
@@ -413,7 +419,7 @@ try:
         for pos2 in grasses_pos:
             all_sprites.add(Grass(pos2))
     if 'id' in info:
-        player_id = info['id'] % 4
+        player_id = info['id']
     if 'pos' in info:
         player_pos = info['pos']
     if 'settings' in info:
@@ -429,14 +435,15 @@ except Exception:
     data = sock.recv(2 ** 20).decode()
 
 
-player_main = Tank(player_pos, 90, player_id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.MOUSEBUTTONDOWN)  # создание игроков
+player_main = Tank(player_pos, 90, player_id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.MOUSEBUTTONDOWN)  # создание игрока
 
-all_sprites.add(player_main)  # добавление их в группу всех спрайтов для отслеживания столкновений при генерации карты
+all_sprites.add(player_main)
 
 
 while running:
-    time += 1
-    player_main.player_inf['shoot'][0] = False
+    time += 1  # время для замедления анимаций из-за большого числа кадров
+    if time % 4 == 0:
+        player_main.player_inf['shoot'][0] = False
     if fire:
         if pojar_channel.get_queue():  # звук пожара
             pojar_channel.unpause()
@@ -447,7 +454,6 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         if event.type == player_main.shoot_button and game and player_main.time >= RELOAD * FPS and player_main.hp > 0:
-            player_main.time = 0
             player_main.shoot()
     if reload:  # перезагрузка игры
         pojar_channel.pause()  # остановка пожара
@@ -464,7 +470,7 @@ while running:
     else:
         player_main.data = [False, False, False, False]
     if True:
-        for player1 in players:
+        for player1 in players:  # обработка столкновений
             data = pygame.sprite.spritecollide(player1, players, dokill=False, collided=pygame.sprite.collide_mask)
             if len(data) > 1:
                 for player2 in data:
@@ -472,16 +478,18 @@ while running:
                         player1.slowing, player2.slowing = SLOWING, SLOWING
             else:
                 player1.colision = False
-    player_main.player_inf['velocity'] = player_main.velocity
+    player_main.player_inf['velocity'] = player_main.velocity  # информация для передачи
     player_main.player_inf['hp'] = player_main.hp
     player_main.player_inf['angle'] = player_main.angle
     player_main.player_inf['pos'] = player_main.rect.center
-    sock.send(json.dumps(player_main.player_inf).encode())
+    # if player_main['shoot'][0]:
+    #     time = 0
+    sock.send(json.dumps(player_main.player_inf).encode())  # отправление информации о игроке
     screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
     patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
     if not game:  # если игра окончена, выводится сообщение с результатом
         text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
-        text2 = font2.render('Нажмите p для перезапуска', True, pygame.Color('yellow'))
+        text2 = font2.render('Ждите перезапуска', True, pygame.Color('yellow'))
         text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
         text_y = HEIGHT // 2 - text.get_height() // 2
         screen.blit(text, (text_x, text_y))  # отображение текста
@@ -497,12 +505,9 @@ while running:
         fires.update()
     clock.tick(FPS)
     pg.display.flip()  # обновление дисплея
-    try:
-        info = json.loads(sock.recv(2 ** 20).decode())
-        if 'patrons' in info:
-            for el in info['patrons']:
-                Patron(*el)
 
+    try:  # принятие информации о поле
+        info = json.loads(sock.recv(2 ** 20).decode())
         if 'players' in info:
             data_players = info['players']
             for id0 in data_players.keys():
@@ -517,8 +522,14 @@ while running:
                     players_inf[id0].velocity = player_info['velocity']
                     if player_info['fire'][0]:
                         Fire(players_inf[id0], player_info['fire'][1])
+                    for data_patron in player_info['patrons']:
+                        players_inf[id0].shoot_data(data_patron)
                 else:
                     player_main.hp = player_info['hp']
+                    if player_info['fire'][0]:
+                        Fire(player_main, player_info['fire'][1])
+                    for data_patron in player_info['patrons']:
+                        player_main.shoot_data(data_patron)
 
             for key_id in players_inf.keys():
                 if key_id not in data_players.keys():
@@ -528,7 +539,7 @@ while running:
             fire = info['fire_sound']
         if 'reload' in info:
             reload = info['reload']
-
     except Exception:
         # info = sock.recv(2 ** 20).decode()
         pass
+    print(players_inf)
