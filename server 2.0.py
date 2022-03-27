@@ -457,7 +457,7 @@ while running:
                               'slowing': SLOWING}}
         id_players += 1
         new_socket.send(json.dumps(json1).encode())
-        time.sleep(2)
+        time.sleep(3)
     except Exception:
         pass
 
