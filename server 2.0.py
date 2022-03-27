@@ -426,6 +426,7 @@ def get_all_id(players):
 
 while running:
     ides = get_all_id(players)
+    pole_info['game'] = game
     pole_info['fire_sound'] = fire
     pole_info['reload'] = False
     events = pygame.event.get()
@@ -434,8 +435,11 @@ while running:
             running = False
         if event.type == pg.KEYDOWN and event.key == pg.K_p:
             pole_info['reload'] = True
+            game = True
             for player in players:
                 player.hp = 100
+        if event.type == pg.KEYDOWN and event.key == pg.K_k:
+            game = False
     try:
         new_socket, addr = main_socket.accept()  # подключение игрока и отправка ему данных об игре
         print('Подключился', addr)
@@ -523,17 +527,17 @@ while running:
                 players_information.remove(data2)
                 sock.close()
                 print('Отключился')
-    screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
-    patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
-    if not game:  # если игра окончена, выводится сообщение с результатом
-        text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
-        text2 = font2.render('Нажмите p для перезапуска', True, pygame.Color('yellow'))
-        text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        screen.blit(text, (text_x, text_y))  # отображение текста
-        screen.blit(text2, (text_x, text_y + 50))
-    else:
-        result = []
+    # screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
+    # patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
+    # if not game:  # если игра окончена, выводится сообщение с результатом
+    #     text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
+    #     text2 = font2.render('Нажмите p для перезапуска', True, pygame.Color('yellow'))
+    #     text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
+    #     text_y = HEIGHT // 2 - text.get_height() // 2
+    #     screen.blit(text, (text_x, text_y))  # отображение текста
+    #     screen.blit(text2, (text_x, text_y + 50))
+    # else:
+    #     result = []
     # text = font.render(f'{score[0]} : {score[1]}', True, pygame.Color('green'))  # рендер текста
     # text_x, text_y = text.get_width() // 2, text.get_height() // 2  # размещение текста в верхнем левом углу
     # screen.blit(text, (text_x, text_y))  # отображение текста
@@ -543,7 +547,7 @@ while running:
     for player0 in players:
         player0.rock_colision()
     clock.tick(FPS)
-    pg.display.flip()
+    # pg.display.flip()
 
 
 

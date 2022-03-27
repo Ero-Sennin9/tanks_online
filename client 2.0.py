@@ -283,7 +283,6 @@ class Tank(pg.sprite.Sprite):  # класс танка
         elif self.velocity[0] < 0:
             self.velocity[0] += TANK_A
 
-
         if angle_p(self.velocity) != None and any(self.data):  # поворот танка исходя из вектора скорости
             self.rotate(angle_p(self.velocity))
 
@@ -539,7 +538,7 @@ while running:
             fire = info['fire_sound']
         if 'reload' in info:
             reload = info['reload']
+        game = info.get('game', game)
     except Exception:
         # info = sock.recv(2 ** 20).decode()
         pass
-    print(players_inf)
