@@ -390,7 +390,6 @@ class Patron(pg.sprite.Sprite):
                             self.kill()  # уничтожение пули
                             if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
                                 time_fire = random.randint(5 * FPS, 20 * FPS)
-                                Fire(elem, time_fire)
                                 fire = True
                                 elem.fire = [True, time_fire]
                                 elem.time_delete_fire = 0
@@ -462,6 +461,9 @@ while running:
             pojar_channel.unpause()
         else:
             pojar_channel.queue(pojar)
+    for player in players:
+        if player.hp <= 0 and game:
+            pygame.mixer.Sound.play(game_over)
     events = pygame.event.get()
     for event in events:
         if event.type == pygame.QUIT:
@@ -553,8 +555,6 @@ while running:
         if 'reload' in info:
             reload = info['reload']
         game = info.get('game', game)
-        if not game:
-            player_main.data = [False, False, False, False]
     except Exception:
         # info = sock.recv(2 ** 20).decode()
         pass
