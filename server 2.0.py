@@ -8,7 +8,8 @@ import pygame.sprite
 import math
 from settings import SERVER_HOST, SERVER_PORT
 import os
-# os.environ["SDL_VIDEODRIVER"] = "dummy"  # на сервере нет дисплея
+import keyboard
+os.environ["SDL_VIDEODRIVER"] = "dummy"  # на сервере нет дисплея
 
 main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # настройка сервера
 main_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
@@ -202,10 +203,10 @@ class Tank(pg.sprite.Sprite):  # класс танка
         self.shoot_button = shoot_button
         self.player = player  # id игрока
         self.control = control  # клавиши для управления танком
-        self.image = pygame.transform.rotate(self.pictures[player - 1],
+        self.image = pygame.transform.rotate(self.pictures[player % 4],
                                              360 - rotation)  # картинки для спрайтов исходя из номера игрока
         self.fire = [False, None]  # информация об анимации пожара для передачи
-        self.image2 = self.pictures[player - 1]  # а также поворот картинки
+        self.image2 = self.pictures[player % 4]  # а также поворот картинки
         self.mask = pygame.mask.from_surface(self.image)  # создание маски
         self.rect = self.image.get_rect()
         self.rect.center = pos
@@ -433,13 +434,13 @@ while running:
     for event in events:
         if event.type == pygame.QUIT:
             running = False
-        if event.type == pg.KEYDOWN and event.key == pg.K_p:
-            pole_info['reload'] = True
-            game = True
-            for player in players:
-                player.hp = 100
-        if event.type == pg.KEYDOWN and event.key == pg.K_k:
-            game = False
+    if keyboard.is_pressed('p'):
+        pole_info['reload'] = True
+        game = True
+        for player in players:
+            player.hp = 100
+    if keyboard.is_pressed('k'):
+        game = False
     try:
         new_socket, addr = main_socket.accept()  # подключение игрока и отправка ему данных об игре
         print('Подключился', addr)
@@ -516,6 +517,7 @@ while running:
 
     for data2 in players_information:  # отправление состояния игрового поля + отключение игрока
         sock = data2[1]
+        id0 = data2[0]
         try:
             sock.send(json.dumps(pole_info).encode())
         except Exception:
