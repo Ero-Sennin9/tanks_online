@@ -4,6 +4,7 @@ import math, random
 import pygame
 import json
 import pygame as pg
+from time import sleep
 from settings import SERVER_HOST, SERVER_PORT
 import os
 
@@ -350,6 +351,8 @@ class Patron(pg.sprite.Sprite):
 
     def __init__(self, speed, pos, rotation, player_id, dam, angle_rik):
         super().__init__(patrons)
+        self.number1 = 0
+        self.number2 = 0
         self.speed = speed
         self.image = pg.transform.rotate(self.pat,
                                          360 - rotation)  # поворот ее на соответствующий градус исходя из поворота танка
@@ -370,20 +373,21 @@ class Patron(pg.sprite.Sprite):
                     self.rect.move_ip(*self.speed)
                 else:
                     if self.collide_with_tank:
-                        elem.damage(self.dam)  # нанесение урона при обратном
+                        elem.damage(self.dam[self.number1 % 4])  # нанесение урона при обратном
+                        self.number1 += 1
                         if self.dam >= 20:  # попадание по танку
-                            sound = boom_sound2 if random.randint(1, 2) == 2 else boom_sound3
-                            elem.boom_sounds.queue(boom_sound1), elem.boom_sounds.queue(
-                                sound)  # звук взрыва
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
-                            # if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
-                            #     Fire(elem, random.randint(5 * FPS, 20 * FPS))
-                            #     fire = True
+                            if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
+                                time_fire = random.randint(5 * FPS, 20 * FPS)
+                                Fire(elem, time_fire)
+                                fire = True
+                                elem.fire = [True, time_fire]
+                                elem.time_delete_fire = 0
+
                         else:  # если произошел рикошет - меняем направление пули
-                            elem.rik_sounds.queue(rik_sound1), elem.rik_sounds.queue(
-                                rik_sound2)  # звук рикошета
-                            angle = self.angle_rik
+                            angle = self.angle_rik[self.number2 % 4]
+                            self.number2 += 1
                             self.speed = (math.sin(math.radians(angle)) * SPEED_PATRON,
                                           -math.cos(math.radians(angle)) * SPEED_PATRON)
                             self.image = pg.transform.rotate(self.pat, 360 - angle)

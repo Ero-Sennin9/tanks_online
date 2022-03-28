@@ -37,6 +37,7 @@ TANK_A = round(TANK_A0, 1)  # ускорение танка при нажати�
 GRASS_STONES = (80, 80)  # размер камней и травы
 RELOAD = 4  # время перезарядки
 SLOWING = 4
+TIME_FOR_REL = 4 * FPS
 fire = False  # наличие огня
 
 all_sprites = pg.sprite.Group()  # создание групп спрайтов для каждого типа объектов
@@ -284,6 +285,8 @@ class Patron(pg.sprite.Sprite):
 
     def __init__(self, speed, pos, rotation, player_id, dam, angle_rik):
         super().__init__(patrons)
+        self.number1 = 0
+        self.number2 = 0
         self.speed = speed
         self.image = pg.transform.rotate(self.pat,
                                          360 - rotation)  # поворот ее на соответствующий градус исходя из поворота танка
@@ -304,7 +307,8 @@ class Patron(pg.sprite.Sprite):
                     self.rect.move_ip(*self.speed)
                 else:
                     if self.collide_with_tank:
-                        elem.damage(self.dam)  # нанесение урона при обратном
+                        elem.damage(self.dam[self.number1 % 4])  # нанесение урона при обратном
+                        self.number1 += 1
                         if self.dam >= 20:  # попадание по танку
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
@@ -316,7 +320,8 @@ class Patron(pg.sprite.Sprite):
                                 elem.time_delete_fire = 0
 
                         else:  # если произошел рикошет - меняем направление пули
-                            angle = self.angle_rik
+                            angle = self.angle_rik[self.number2 % 4]
+                            self.number2 += 1
                             self.speed = (math.sin(math.radians(angle)) * SPEED_PATRON,
                                           -math.cos(math.radians(angle)) * SPEED_PATRON)
                             self.image = pg.transform.rotate(self.pat, 360 - angle)
@@ -425,6 +430,11 @@ def get_all_id(players):
     return [player.player for player in players]
 
 
+def get_all_hp(players):
+    return list(filter(lambda s: s > 0, [player.hp for player in players]))
+
+
+time_for_reload = 0
 while running:
     ides = get_all_id(players)
     pole_info['game'] = game
@@ -434,12 +444,18 @@ while running:
     for event in events:
         if event.type == pygame.QUIT:
             running = False
-    if keyboard.is_pressed('p'):
-        pole_info['reload'] = True
-        game = True
-        for player in players:
-            player.hp = 100
-    if keyboard.is_pressed('k'):
+    if not game:
+        time_for_reload += 1
+        if time_for_reload >= TIME_FOR_REL:
+            pole_info['reload'] = True
+            game = True
+            for player in players:
+                player.hp = 100
+            for fire0 in fires:
+                fire0.kill()
+                fire = False
+            time_for_reload = 0
+    if len(get_all_hp(players)) <= 1 and len(players) > 1:
         game = False
     try:
         new_socket, addr = main_socket.accept()  # подключение игрока и отправка ему данных об игре
@@ -488,9 +504,11 @@ while running:
             pole_info['players'][id]['fire'] = players_inf[id].fire
             if player_info['shoot'][0]:  # выстрел
                 if players_inf[id].time >= RELOAD * FPS:
-                    dam = random.randint(4, 10) if random.randint(1, 3) == 2 else random.randint(22, 30)  # рикошет или не рикошет + расчет урона
-                    angle = (angle_p(player_info['shoot'][1][0]) + random.randint(-28, 28)) % 360
-                    angle = 360 - abs(angle) if angle < 0 else angle
+                    dam = [random.randint(4, 10) if random.randint(1, 3) == 2 else random.randint(22, 30) for i in range(4)]  # рикошет или не рикошет + расчет урона
+                    angle = []
+                    for i in range(4):
+                        angle0 = (angle_p(player_info['shoot'][1][0]) + random.randint(-28, 28)) % 360
+                        angle.append(360 - abs(angle0) if angle0 < 0 else angle0)
                     data_patron = player_info['shoot'][1] + [dam, angle]
                     players_inf[id].shoot_data(data_patron)
                     pole_info['players'][id]['patrons'].append(data_patron)  # передача информации о пуле
