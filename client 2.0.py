@@ -256,14 +256,23 @@ class Tank(pg.sprite.Sprite):  # класс танка
 
     def move(self, events):  # управление танком
         for i in events:
-            if i.type == pg.KEYDOWN or i.type == pg.KEYUP:  # при удерживании кнопки управления танком значение передвижения в данном направлении становится True
-                if i.key == self.control[0]:
+            if i.type == pg.KEYDOWN:  # при удерживании кнопки управления танком значение передвижения в данном направлении становится True
+                if i.key == self.control[0] and not self.data[0]:
                     self.data[0] = not self.data[0]
-                if i.key == self.control[1]:
+                if i.key == self.control[1] and not self.data[1]:
                     self.data[1] = not self.data[1]
-                if i.key == self.control[2]:
+                if i.key == self.control[2] and not self.data[2]:
                     self.data[2] = not self.data[2]
-                if i.key == self.control[3]:
+                if i.key == self.control[3] and not self.data[3]:
+                    self.data[3] = not self.data[3]
+            elif i.type == pg.KEYUP:
+                if i.key == self.control[0] and self.data[0]:
+                    self.data[0] = not self.data[0]
+                if i.key == self.control[1] and self.data[1]:
+                    self.data[1] = not self.data[1]
+                if i.key == self.control[2] and self.data[2]:
+                    self.data[2] = not self.data[2]
+                if i.key == self.control[3] and self.data[3]:
                     self.data[3] = not self.data[3]
         self.velocity = [round(self.velocity[0], 1), round(self.velocity[1],
                                                            1)]  # округление скоростей, так как почему-то в процессе прибавления и убавления они изменяются
@@ -373,9 +382,10 @@ class Patron(pg.sprite.Sprite):
                     self.rect.move_ip(*self.speed)
                 else:
                     if self.collide_with_tank:
-                        elem.damage(self.dam[self.number1 % 4])  # нанесение урона при обратном
+                        dam = self.dam[self.number1 % 4]
+                        elem.damage(dam)  # нанесение урона при обратном
                         self.number1 += 1
-                        if self.dam >= 20:  # попадание по танку
+                        if dam >= 20:  # попадание по танку
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
                             if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
@@ -543,6 +553,8 @@ while running:
         if 'reload' in info:
             reload = info['reload']
         game = info.get('game', game)
+        if not game:
+            player_main.data = [False, False, False, False]
     except Exception:
         # info = sock.recv(2 ** 20).decode()
         pass

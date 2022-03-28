@@ -307,9 +307,10 @@ class Patron(pg.sprite.Sprite):
                     self.rect.move_ip(*self.speed)
                 else:
                     if self.collide_with_tank:
-                        elem.damage(self.dam[self.number1 % 4])  # нанесение урона при обратном
+                        dam = self.dam[self.number1 % 4]
+                        elem.damage(dam)  # нанесение урона при обратном
                         self.number1 += 1
-                        if self.dam >= 20:  # попадание по танку
+                        if dam >= 20:  # попадание по танку
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
                             if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
