@@ -456,7 +456,7 @@ while running:
                 fire0.kill()
                 fire = False
             time_for_reload = 0
-    if len(get_all_hp(players)) <= 1 and len(players) > 1:
+    if (len(get_all_hp(players)) <= 1 and len(players) > 1) or (len(get_all_hp(players)) == 0 and len(players) == 1):
         game = False
     try:
         new_socket, addr = main_socket.accept()  # подключение игрока и отправка ему данных об игре
