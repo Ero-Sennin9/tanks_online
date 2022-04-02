@@ -135,11 +135,12 @@ def load_image(name, colorkey=None):  # загрузка изображения 
 class Fire(AnimatedSprite):  # анимация пожара
     sheet = load_image('fire.png')
 
-    def __init__(self, player, time):
+    def __init__(self, player, time, player_id):
         super().__init__(player.rect.centerx, player.rect.centery - 40, self.sheet, 4, 4)
         fires.add(self)  # добавление спрайта в группу пожара
         self.time = time  # время действия пожара
         self.player = player  # игрок с этим эффектом
+        self.player_id = player_id
 
     def update(self):  # анимация взрыва
         global fire
@@ -152,6 +153,8 @@ class Fire(AnimatedSprite):  # анимация пожара
             fire = False
         self.image = self.frames[self.cur_frame]
         self.player.damage(0.089)  # урон от пожара
+        if self.player.hp <= 0:
+            players_inf[self.player_id].kills += 1
 
 
 class HealthBar(pg.sprite.Sprite):  # класс полоски здоровья
@@ -199,6 +202,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
 
     def __init__(self, pos, rotation, player, control, time, shoot_button):
         super().__init__(players)
+        self.kills = 0
         self.first_position = pos
         self.pos = pos
         self.shoot_button = shoot_button
@@ -309,13 +313,15 @@ class Patron(pg.sprite.Sprite):
                     if self.collide_with_tank:
                         dam = self.dam[self.number1 % 4]
                         elem.damage(dam)  # нанесение урона при обратном
+                        if elem.hp <= 0:
+                            players_inf[self.player_id].kills += 1
                         self.number1 += 1
                         if dam >= 20:  # попадание по танку
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
                             if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
                                 time_fire = random.randint(5 * FPS, 20 * FPS)
-                                Fire(elem, time_fire)
+                                Fire(elem, time_fire, self.player_id)
                                 fire = True
                                 elem.fire = [True, time_fire]
                                 elem.time_delete_fire = 0
@@ -503,6 +509,7 @@ while running:
             pole_info['players'][id]['angle'] = player_info['angle']
             pole_info['players'][id]['velocity'] = player_info['velocity']
             pole_info['players'][id]['fire'] = players_inf[id].fire
+            pole_info['players'][id]['kills'] = players_inf[id].kills
             if player_info['shoot'][0]:  # выстрел
                 if players_inf[id].time >= RELOAD * FPS:
                     dam = [random.randint(4, 10) if random.randint(1, 3) == 2 else random.randint(22, 30) for i in range(4)]  # рикошет или не рикошет + расчет урона

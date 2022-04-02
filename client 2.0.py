@@ -218,6 +218,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
 
     def __init__(self, pos, rotation, player, control, time, shoot_button):
         super().__init__(players)
+        self.kills = 0
         self.first_position = pos
         self.pos = pos
         self.shoot_button = shoot_button
@@ -340,6 +341,10 @@ class Tank(pg.sprite.Sprite):  # класс танка
         pygame.draw.arc(screen, pygame.Color('blue'), (self.rect.centerx + self.reload_center[0] - 20,
                                                        self.rect.centery - self.reload_center[1] - 20, 20, 20),
                         0, angle, 5)  # состояние перезарядки
+        if self.player != player_main.player:  # показ количества убийств
+            text = font.render(str(player_main.kills), True, pygame.Color('red'))  # рендер текста
+            text_x, text_y = (self.rect.centerx - self.reload_center[0] + 5, self.rect.centery - self.reload_center[1] - 30)  # размещение текста в верхнем левом углу
+            screen.blit(text, (text_x, text_y))  # отображение текста
 
     def damage(self, dam):  # нанесение урона танку
         self.hp -= dam
@@ -511,9 +516,9 @@ while running:
         screen.blit(text2, (text_x, text_y + 50))
     else:
         result = []
-    # text = font.render(f'{score[0]} : {score[1]}', True, pygame.Color('green'))  # рендер текста
-    # text_x, text_y = text.get_width() // 2, text.get_height() // 2  # размещение текста в верхнем левом углу
-    # screen.blit(text, (text_x, text_y))  # отображение текста
+    text = font.render(f'Убийств: {player_main.kills}', True, pygame.Color('green'))  # рендер текста
+    text_x, text_y = text.get_width() // 8, text.get_height() // 2  # размещение текста в верхнем левом углу
+    screen.blit(text, (text_x, text_y))  # отображение текста
     players.update(), patrons.update()  # обновление спрайтов(анимация, движение, взрывы, обновление полоски здоровья)
     if time % 2 == 0:
         boom.update()
@@ -535,12 +540,14 @@ while running:
                     players_inf[id0].rotate(player_info['angle'])
                     players_inf[id0].rect.center = player_info['pos']
                     players_inf[id0].velocity = player_info['velocity']
+                    players_inf[id0].kills = player_info['kills']
                     if player_info['fire'][0]:
                         Fire(players_inf[id0], player_info['fire'][1])
                     for data_patron in player_info['patrons']:
                         players_inf[id0].shoot_data(data_patron)
                 else:
                     player_main.hp = player_info['hp']
+                    player_main.kills = player_info['kills']
                     if player_info['fire'][0]:
                         Fire(player_main, player_info['fire'][1])
                     for data_patron in player_info['patrons']:
