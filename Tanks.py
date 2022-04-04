@@ -37,7 +37,7 @@ pojar_channel = pygame.mixer.Channel(0)
 
 
 def load_image(name, colorkey=None):  # загрузка изображения для спрайта
-    fullname = os.path.join('data', name)
+    fullname = os.path.join('pictures', name)
     # если файла не существует, то выходим
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")

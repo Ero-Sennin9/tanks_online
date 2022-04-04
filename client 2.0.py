@@ -5,12 +5,19 @@ import pygame
 import json
 import pygame as pg
 from time import sleep
+
+from data import db_session
 from settings import SERVER_HOST, SERVER_PORT
 import os
+from untitled import Ui_MainWindow
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QCheckBox, QLCDNumber, QMainWindow
+from PyQt5 import QtCore, QtGui, QtWidgets
+from untitled import Ui_MainWindow
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 sock.connect((SERVER_HOST, int(SERVER_PORT)))
+
 
 all_sprites = pg.sprite.Group()  # создание групп спрайтов для каждого типа объектов
 players = pg.sprite.Group()
@@ -21,6 +28,59 @@ boom = pg.sprite.Group()
 health = pg.sprite.Group()
 fires = pg.sprite.Group()
 
+pole_info = {}
+
+login = None  # логин игрока
+
+
+class Example(QMainWindow, Ui_MainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setupUi(self)
+        self.label_3.setText('<a href="https://ru.stackoverflow.com/"> Регистрация </a>')
+        self.label_3.setOpenExternalLinks(True)
+        self.pushButton.clicked.connect(self.act)
+
+    def act(self):
+        try:
+            sock.send(json.dumps({'password': self.lineEdit_2.text(),
+                                  'login': self.lineEdit.text()}).encode())
+
+            info_start = json.loads(sock.recv(2 ** 20).decode())
+            print(info_start)
+            if 'id' in info_start:
+                global pole_info, login
+                pole_info = info_start
+                login = self.lineEdit.text()
+                self.close()
+            elif 'error' in info_start:
+                self.statusbar.showMessage(info_start['error'])
+        except Exception:
+            pass
+
+
+if True:  # окно авторизации
+    app = QApplication(sys.argv)
+    ex = Example()
+    ex.show()
+    app.exec()
+    if 'id' in pole_info:
+        player_id = pole_info['id']
+    if 'pos' in pole_info:
+        player_pos = pole_info['pos']
+    if 'angle' in pole_info:
+        player_angle = pole_info['angle']
+    if 'settings' in pole_info:
+        FPS = pole_info['settings']['fps']
+        SPEED_TANK = pole_info['settings']['speed_tank']
+        SPEED_PATRON = pole_info['settings']['speed_patron']
+        TANK_A0 = pole_info['settings']['tank_a0']
+        GRASS_STONES = pole_info['settings']['grass_stones']
+        RELOAD = pole_info['settings']['reload']
+        SLOWING = pole_info['settings']['slowing']
+        TANK_A = round(TANK_A0, 1)
+    if 'generation' in pole_info:
+        rocks_pos, grasses_pos = pole_info['generation'][0], pole_info['generation'][1]
 
   # настройки pygame
 x = 100
@@ -28,9 +88,9 @@ y = 45
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
 os.environ['SDL_VIDEO_CENTERED'] = '0'
 pg.init()
-GRASS_STONES = (80, 80)
 SIZE = WIDTH, HEIGHT = 1500, 700
 screen = pg.display.set_mode(SIZE)
+pg.display.set_caption('Tanks_online(epic)')
 clock = pg.time.Clock()
 fire = False  # наличие огня
 running = True
@@ -38,21 +98,9 @@ players_inf = {}  # спрайты других игроков
 time = 0  # время, чтобы замедлять анимацию из-за высокого FPS
 reload = False
 
-boom_sound1 = pygame.mixer.Sound('sounds/boom.mp3')  # звуки
-boom_sound2 = pygame.mixer.Sound('sounds/probitie1.mp3')
-boom_sound3 = pygame.mixer.Sound('sounds/probitie-2.mp3')
-rik_sound1 = pygame.mixer.Sound('sounds/rikoshet.mp3')
-rik_sound2 = pygame.mixer.Sound('sounds/rikoshet1.mp3')
-game_over = pygame.mixer.Sound('sounds/tank-unichtozhen.mp3')
-pojar = pygame.mixer.Sound('sounds/pojar.mp3')
-# boom_sounds = list(
-#     [pygame.mixer.Channel(1), pygame.mixer.Channel(2)])  # списки для хранения каналов для воспроизведения
-# rik_sounds = list([pygame.mixer.Channel(3), pygame.mixer.Channel(4)])
-pojar_channel = pygame.mixer.Channel(0)
-
 
 def load_image(name, colorkey=None):  # загрузка изображения для спрайта
-    fullname = os.path.join('data', name)
+    fullname = os.path.join('pictures', name)
     # если файла не существует, то выходим
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")
@@ -87,6 +135,20 @@ class Grass(pg.sprite.Sprite):  # класс куста
         self.image = self.grass
         self.rect = self.image.get_rect()
         self.rect.center = pos
+
+for pos1 in rocks_pos:
+    all_sprites.add(Stone(pos1))
+for pos2 in grasses_pos:
+    all_sprites.add(Grass(pos2))
+
+boom_sound1 = pygame.mixer.Sound('sounds/boom.mp3')  # звуки
+boom_sound2 = pygame.mixer.Sound('sounds/probitie1.mp3')
+boom_sound3 = pygame.mixer.Sound('sounds/probitie-2.mp3')
+rik_sound1 = pygame.mixer.Sound('sounds/rikoshet.mp3')
+rik_sound2 = pygame.mixer.Sound('sounds/rikoshet1.mp3')
+game_over = pygame.mixer.Sound('sounds/tank-unichtozhen.mp3')
+pojar = pygame.mixer.Sound('sounds/pojar.mp3')
+pojar_channel = pygame.mixer.Channel(0)
 
 
 def angle_p(vec):  # рассчет угла поворота исходя из вектора скорости
@@ -216,8 +278,9 @@ class Tank(pg.sprite.Sprite):  # класс танка
             pygame.transform.scale(load_image('tank1.png'), (40, 55)),
             pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений двух игроков
 
-    def __init__(self, pos, rotation, player, control, time, shoot_button):
+    def __init__(self, pos, rotation, player, control, time, shoot_button, name):
         super().__init__(players)
+        self.name = name
         self.kills = 0
         self.first_position = pos
         self.pos = pos
@@ -342,8 +405,12 @@ class Tank(pg.sprite.Sprite):  # класс танка
                                                        self.rect.centery - self.reload_center[1] - 20, 20, 20),
                         0, angle, 5)  # состояние перезарядки
         if self.player != player_main.player:  # показ количества убийств
-            text = font.render(str(player_main.kills), True, pygame.Color('red'))  # рендер текста
+            text = font.render(str(self.kills), True, pygame.Color('red'))  # рендер текста
             text_x, text_y = (self.rect.centerx - self.reload_center[0] + 5, self.rect.centery - self.reload_center[1] - 30)  # размещение текста в верхнем левом углу
+            screen.blit(text, (text_x, text_y))  # отображение текста
+            text = font3.render(self.name, True, pygame.Color('green'))  # рендер текста
+            text_x, text_y = (self.rect.centerx - self.reload_center[0] + 10,
+                          self.rect.centery - self.reload_center[1] - 45)  # размещение текста в верхнем левом углу
             screen.blit(text, (text_x, text_y))  # отображение текста
 
     def damage(self, dam):  # нанесение урона танку
@@ -391,6 +458,8 @@ class Patron(pg.sprite.Sprite):
                         elem.damage(dam)  # нанесение урона при обратном
                         self.number1 += 1
                         if dam >= 20:  # попадание по танку
+                            boom_sound = boom_sound2 if random.randint(1, 2) == 2 else boom_sound3
+                            elem.boom_sounds.queue(boom_sound1), elem.boom_sounds.queue(boom_sound)  # звук взрыва
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
                             if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
@@ -400,6 +469,7 @@ class Patron(pg.sprite.Sprite):
                                 elem.time_delete_fire = 0
 
                         else:  # если произошел рикошет - меняем направление пули
+                            elem.rik_sounds.queue(rik_sound1), elem.rik_sounds.queue(rik_sound2)  # звук рикошета
                             angle = self.angle_rik[self.number2 % 4]
                             self.number2 += 1
                             self.speed = (math.sin(math.radians(angle)) * SPEED_PATRON,
@@ -421,38 +491,11 @@ class Patron(pg.sprite.Sprite):
             self.kill()  # уничтожение пули
 
 
-player_id = 1   # позиция и id на случай, если не произойдет передачи id
-player_pos = (60, HEIGHT / 2)
-
 pole = load_image('pole.jpg')  # загрузка изображения игрового поля
 game = True  # статус игры
-font, font2 = pg.font.Font(None, 50), pg.font.Font(None, 36)  # шрифты для текста
-try:  # принятие информации о игре
-    info = json.loads(sock.recv(2 ** 20).decode())
-    if 'generation' in info:
-        rocks_pos, grasses_pos = info['generation'][0], info['generation'][1]
-        for pos1 in rocks_pos:
-            all_sprites.add(Stone(pos1))
-        for pos2 in grasses_pos:
-            all_sprites.add(Grass(pos2))
-    if 'id' in info:
-        player_id = info['id']
-    if 'pos' in info:
-        player_pos = info['pos']
-    if 'settings' in info:
-        FPS = info['settings']['fps']
-        SPEED_TANK = info['settings']['speed_tank']
-        SPEED_PATRON = info['settings']['speed_patron']
-        TANK_A0 = info['settings']['tank_a0']
-        GRASS_STONES = info['settings']['grass_stones']
-        RELOAD = info['settings']['reload']
-        SLOWING = info['settings']['slowing']
-        TANK_A = round(TANK_A0, 1)
-except Exception:
-    data = sock.recv(2 ** 20).decode()
+font, font2, font3 = pg.font.Font(None, 50), pg.font.Font(None, 36), pg.font.Font(None, 18)  # шрифты для текста
 
-
-player_main = Tank(player_pos, 90, player_id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.MOUSEBUTTONDOWN)  # создание игрока
+player_main = Tank(player_pos, player_angle, player_id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.MOUSEBUTTONDOWN, login)  # создание игрока
 
 all_sprites.add(player_main)
 
@@ -530,12 +573,13 @@ while running:
         info = json.loads(sock.recv(2 ** 20).decode())
         if 'players' in info:
             data_players = info['players']
+            print(data_players)
             for id0 in data_players.keys():
                 player_info = data_players[id0]
                 if int(id0) != player_main.player:
                     if id0 not in players_inf:
                         players_inf[id0] = Tank(player_info['pos'], 90, int(id0), [pg.K_w, pg.K_d, pg.K_s, pg.K_a],
-                                               RELOAD * FPS, pg.KEYDOWN)
+                                               RELOAD * FPS, pg.KEYDOWN, player_info['login'])
                     players_inf[id0].hp = player_info['hp']
                     players_inf[id0].rotate(player_info['angle'])
                     players_inf[id0].rect.center = player_info['pos']
@@ -565,3 +609,5 @@ while running:
     except Exception:
         # info = sock.recv(2 ** 20).decode()
         pass
+    # for player in players:
+    #     print(player.player, player.kills)

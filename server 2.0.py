@@ -6,9 +6,13 @@ import pygame as pg
 import random
 import pygame.sprite
 import math
+
+from data.users import User
+
+from data import db_session
 from settings import SERVER_HOST, SERVER_PORT
 import os
-import keyboard
+
 os.environ["SDL_VIDEODRIVER"] = "dummy"  # на сервере нет дисплея
 
 main_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # настройка сервера
@@ -16,6 +20,9 @@ main_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 main_socket.bind((SERVER_HOST, int(SERVER_PORT)))
 main_socket.setblocking(0)
 main_socket.listen(5)
+
+db_session.global_init("db/mars.db")
+db_sess = db_session.create_session()
 
 
 id_players = 1   # id одключающихся игроков
@@ -31,7 +38,7 @@ SIZE = WIDTH, HEIGHT = 1500, 700
 screen = pg.display.set_mode(SIZE)
 clock = pg.time.Clock()
 SPEED_TANK = 4.2  # максимальная скорость танка
-SPEED_PATRON = 20  # скорость патрона
+SPEED_PATRON = 14  # скорость патрона
 TANK_A0 = 0.16
 TANK_A = round(TANK_A0, 1)  # ускорение танка при нажатии на кнопки движения
 GRASS_STONES = (80, 80)  # размер камней и травы
@@ -116,7 +123,7 @@ class AnimatedSprite(pygame.sprite.Sprite):  # анимация спрайтов
 
 
 def load_image(name, colorkey=None):  # загрузка изображения для спрайта
-    fullname = os.path.join('data', name)
+    fullname = os.path.join('pictures', name)
     # если файла не существует, то выходим
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")
@@ -148,13 +155,13 @@ class Fire(AnimatedSprite):  # анимация пожара
         self.cur_frame = self.cur_frame + 1
         self.cur_frame %= self.count_frames
         self.time -= 1
-        if self.time <= 0:  # уничтожение спрайта, если эффект окончен
-            self.kill()
-            fire = False
         self.image = self.frames[self.cur_frame]
         self.player.damage(0.089)  # урон от пожара
         if self.player.hp <= 0:
-            players_inf[self.player_id].kills += 1
+            players_inf[self.player_id].stat['kills'] += 1
+        if self.time <= 0 or self.player.hp <= 0:  # уничтожение спрайта, если эффект окончен
+            self.kill()
+            fire = False
 
 
 class HealthBar(pg.sprite.Sprite):  # класс полоски здоровья
@@ -200,9 +207,11 @@ class Tank(pg.sprite.Sprite):  # класс танка
             pygame.transform.scale(load_image('tank1.png'), (40, 55)),
             pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений игроков
 
-    def __init__(self, pos, rotation, player, control, time, shoot_button):
+    def __init__(self, pos, rotation, player, control, time, shoot_button, name):
         super().__init__(players)
-        self.kills = 0
+        self.name = name
+        self.stat = {'kills': 0,
+                     'deaths': 0}
         self.first_position = pos
         self.pos = pos
         self.shoot_button = shoot_button
@@ -225,7 +234,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
         self.reload_center = (75, 38)  # центр значка перезарядки относительно центра танка
         self.time = time
         self.colision = False
-        self.player_inf = {'pos': self.first_position, # информация, идущая на сервер
+        self.player_inf = {'pos': self.first_position,# информация, идущая на сервер
                            'shoot': [None, None]}
         self.time_delete_patrons = 0
         self.time_delete_fire = 0
@@ -314,12 +323,12 @@ class Patron(pg.sprite.Sprite):
                         dam = self.dam[self.number1 % 4]
                         elem.damage(dam)  # нанесение урона при обратном
                         if elem.hp <= 0:
-                            players_inf[self.player_id].kills += 1
+                            players_inf[self.player_id].stat['kills'] += 1
                         self.number1 += 1
                         if dam >= 20:  # попадание по танку
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
-                            if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
+                            if random.randint(1, 2) == 1:  # c небольшой вероятностью вызывается пожар
                                 time_fire = random.randint(5 * FPS, 20 * FPS)
                                 Fire(elem, time_fire, self.player_id)
                                 fire = True
@@ -347,22 +356,9 @@ class Patron(pg.sprite.Sprite):
             self.kill()  # уничтожение пули
 
 
-class Tank2(pg.sprite.Sprite):  # класс танка для задания позиций игроков в начале игры
-    data = [pygame.transform.scale(load_image('tank1.png'), (40, 55)),
-            pygame.transform.scale(load_image('tank2.png'), (40, 55)),
-            pygame.transform.scale(load_image('tank1.png'), (40, 55)),
-            pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений двух игроков
-
+class Tank2(Tank):  # класс танка для задания позиций игроков в начале игры
     def __init__(self, pos, rotation):
-        super().__init__(players)
-        self.first_position = pos
-        self.pos = pos
-        self.image = pygame.transform.rotate(self.data[1],
-                                             360 - rotation)  # картинки для спрайтов исходя из номера игрока
-        self.image2 = self.data[1]  # а также поворот картинки
-        self.mask = pygame.mask.from_surface(self.image)  # создание маски
-        self.rect = self.image.get_rect()
-        self.rect.center = pos
+        super().__init__(pos, rotation, 1, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.KEYDOWN, 'gen')
 
 
 def generate_level(value_of_grass, value_of_stones):  # генерация уровня
@@ -410,6 +406,7 @@ class Grass(pg.sprite.Sprite):  # класс куста
 
 
 positions = []
+angles = []
 running = True
 generate_level(25, 25)
 data_rocks_grass = [[rock.rect.center for rock in rocks], [grass.rect.center for grass in grasses]]  # иинформация о расположении травы и камней
@@ -420,6 +417,7 @@ while len(positions) != 4:  # позиции для расположения и�
     if not pg.sprite.spritecollide(el, all_sprites, dokill=False,
                                    collided=pygame.sprite.collide_circle):  # проверка на столкновение с другими объектам
         positions.append(el.pos)
+        angles.append(el.angle)
         all_sprites.add(el)
     else:
         el.kill()
@@ -439,6 +437,10 @@ def get_all_id(players):
 
 def get_all_hp(players):
     return list(filter(lambda s: s > 0, [player.hp for player in players]))
+
+
+def get_all_logins(players):
+    return [el.name for el in players]
 
 
 time_for_reload = 0
@@ -468,37 +470,52 @@ while running:
         new_socket, addr = main_socket.accept()  # подключение игрока и отправка ему данных об игре
         print('Подключился', addr)
         new_socket.setblocking(0)
-        players_information.append([id_players, new_socket, 0, None])
-        json1 = {'id': id_players,
-                 'generation': data_rocks_grass,
-                 'pos': positions[id_players % 4],
-                 'settings': {'fps': FPS,
-                              'speed_tank': SPEED_TANK,
-                              'speed_patron': SPEED_PATRON,
-                              'tank_a0': TANK_A0,
-                              'grass_stones': GRASS_STONES,
-                              'reload': RELOAD,
-                              'slowing': SLOWING}}
+        players_information.append([id_players, new_socket, 0, None, False, None])
         id_players += 1
-        new_socket.send(json.dumps(json1).encode())
-        time.sleep(3)
     except Exception:
         pass
 
     for data1 in players_information:  # получение информации от пользователей и иx обработка
+        id, new_socket, errors, data, autorization, login = data1
         try:
-            id, new_socket, errors, data = data1
+
             info = data1[1].recv(2 ** 20)
-            data1[-1] = json.loads(info.decode())
+
+            login_or_inform = json.loads(info.decode())
+            if 'login' in login_or_inform:
+                user = db_sess.query(User).filter(User.email == login_or_inform['login']).first()
+                if user and user.check_password(login_or_inform['password']):
+                    if login_or_inform['login'] not in get_all_logins(players):
+                        data1[4] = True
+                        data1[5] = login_or_inform['login']
+                        json1 = {'id': id,
+                                 'generation': data_rocks_grass,
+                                 'pos': positions[id % 4],
+                                 'settings': {'fps': FPS,
+                                              'speed_tank': SPEED_TANK,
+                                              'speed_patron': SPEED_PATRON,
+                                              'tank_a0': TANK_A0,
+                                              'grass_stones': GRASS_STONES,
+                                              'reload': RELOAD,
+                                              'slowing': SLOWING},
+                                 'angle': angles[id % 4]}
+                        new_socket.send(json.dumps(json1).encode())
+                        time.sleep(3)
+                    else:
+                        new_socket.send(json.dumps({'error': 'Пользователь уже в игре'}).encode())
+                else:
+                    new_socket.send(json.dumps({'error': 'Неправильный логин или пароль'}).encode())
+            if 'pos' in login_or_inform and autorization:
+                data1[3] = login_or_inform
         except Exception:
             pass
 
-    info_send = list(map(lambda s: [s[0], s[-1]], players_information))
-    for id, player_info in info_send:  # получение информации от пользователей и иx обработка
+    info_send = list(map(lambda s: [s[0], s[3], s[5]], players_information))
+    for id, player_info, login in info_send:  # получение информации от пользователей и иx обработка
         if player_info != None:  # получение информации от пользователей и иx обработка
             if id not in players_inf:  # создание танка, если он отсутствует в списке
                 players_inf[id] = Tank(player_info['pos'], 90, id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a],
-                                        RELOAD * FPS, pg.KEYDOWN)
+                                        RELOAD * FPS, pg.KEYDOWN, login)
             players_inf[id].velocity = player_info['velocity']  # иначе - применение переданных данных об игроке
             players_inf[id].rotate(player_info['angle'])
             players_inf[id].rect.center = player_info['pos']
@@ -509,7 +526,8 @@ while running:
             pole_info['players'][id]['angle'] = player_info['angle']
             pole_info['players'][id]['velocity'] = player_info['velocity']
             pole_info['players'][id]['fire'] = players_inf[id].fire
-            pole_info['players'][id]['kills'] = players_inf[id].kills
+            pole_info['players'][id]['kills'] = players_inf[id].stat['kills']
+            pole_info['players'][id]['login'] = players_inf[id].name
             if player_info['shoot'][0]:  # выстрел
                 if players_inf[id].time >= RELOAD * FPS:
                     dam = [random.randint(4, 10) if random.randint(1, 3) == 2 else random.randint(22, 30) for i in range(4)]  # рикошет или не рикошет + расчет урона
@@ -545,13 +563,18 @@ while running:
         sock = data2[1]
         id0 = data2[0]
         try:
-            sock.send(json.dumps(pole_info).encode())
+            if data2[-1]:
+                sock.send(json.dumps(pole_info).encode())
         except Exception:
             data2[2] += 1
             if data2[2] == 750:
-                players_inf[data2[0]].kill()
-                del pole_info['players'][data2[0]]
-                del players_inf[data2[0]]
+                print(data2)
+                try:
+                    players_inf[data2[0]].kill()
+                    del players_inf[data2[0]]
+                    del pole_info['players'][data2[0]]
+                except Exception:
+                    pass
                 players_information.remove(data2)
                 sock.close()
                 print('Отключился')
