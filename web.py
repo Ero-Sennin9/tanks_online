@@ -11,9 +11,7 @@ from data.jobs import Jobs
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
-app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(
-    days=365
-)
+app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=365)
 login_manager = LoginManager()
 login_manager.init_app(app)
 

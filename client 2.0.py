@@ -37,7 +37,7 @@ class Example(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.label_3.setText('<a href="https://ru.stackoverflow.com/"> Регистрация </a>')
+        self.label_3.setText('<a href="http://host:5000/register"> Регистрация </a>')
         self.label_3.setOpenExternalLinks(True)
         self.pushButton.clicked.connect(self.act)
 
