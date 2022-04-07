@@ -507,6 +507,8 @@ while running:
                     new_socket.send(json.dumps({'error': 'Неправильный логин или пароль'}).encode())
             if 'pos' in login_or_inform and autorization:
                 data1[3] = login_or_inform
+            if 'info' in login_or_inform:
+                new_socket.send(json.dumps({'error': 'Пока не придумано'}).encode())
         except Exception:
             pass
 

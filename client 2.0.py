@@ -10,7 +10,7 @@ from data import db_session
 from settings import SERVER_HOST, SERVER_PORT
 import os
 from untitled import Ui_MainWindow
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QLineEdit, QLabel, QCheckBox, QLCDNumber, QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QApplication
 from PyQt5 import QtCore, QtGui, QtWidgets
 from untitled import Ui_MainWindow
 
@@ -37,17 +37,27 @@ class Example(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.label_3.setText('<a href="http://host:5000/register"> Регистрация </a>')
+        self.label_3.setText(f'<a href="http://{SERVER_HOST}:5000/register"> Регистрация </a>')
         self.label_3.setOpenExternalLinks(True)
         self.pushButton.clicked.connect(self.act)
+        self.checkBox_3.stateChanged.connect(self.act2)
+        self.lineEdit_2.setEchoMode(QtWidgets.QLineEdit.Password)
+        remember_info = {}
+        with open('remember.txt', mode='rt') as file:
+            try:
+                remember_info = json.load(file)
+            except Exception:
+                pass
+        if 'password' in remember_info:
+            self.lineEdit_2.setText(remember_info['password'])
+        if 'login' in remember_info:
+            self.lineEdit.setText(remember_info['login'])
 
     def act(self):
         try:
             sock.send(json.dumps({'password': self.lineEdit_2.text(),
                                   'login': self.lineEdit.text()}).encode())
-
             info_start = json.loads(sock.recv(2 ** 20).decode())
-            print(info_start)
             if 'id' in info_start:
                 global pole_info, login
                 pole_info = info_start
@@ -57,6 +67,24 @@ class Example(QMainWindow, Ui_MainWindow):
                 self.statusbar.showMessage(info_start['error'])
         except Exception:
             pass
+        remember_data = {}
+        with open('remember.txt', mode='rt') as file:
+            try:
+                remember_data = json.load(file)
+            except Exception:
+                pass
+        if self.checkBox.isChecked():
+            remember_data['login'] = self.lineEdit.text()
+        if self.checkBox_2.isChecked():
+            remember_data['password'] = self.lineEdit_2.text()
+        with open('remember.txt', mode='wt') as file:
+            json.dump(remember_data, file)
+
+    def act2(self):
+        if not self.checkBox_3.isChecked():
+            self.lineEdit_2.setEchoMode(QtWidgets.QLineEdit.Password)
+        else:
+            self.lineEdit_2.setEchoMode(QtWidgets.QLineEdit.Normal)
 
 
 if True:  # окно авторизации
@@ -64,6 +92,8 @@ if True:  # окно авторизации
     ex = Example()
     ex.show()
     app.exec()
+    if not pole_info:
+        sys.exit()
     if 'id' in pole_info:
         player_id = pole_info['id']
     if 'pos' in pole_info:
@@ -270,6 +300,7 @@ class HealthBar(pg.sprite.Sprite):  # класс полоски здоровья
         self.image.set_colorkey(pygame.Color("white"))
         self.image = self.image.convert_alpha()
         self.rect.center = player.rect.centerx, player.rect.centery - self.height  # рисование полоски с учетом высоты
+
 
 
 class Tank(pg.sprite.Sprite):  # класс танка
@@ -573,7 +604,6 @@ while running:
         info = json.loads(sock.recv(2 ** 20).decode())
         if 'players' in info:
             data_players = info['players']
-            print(data_players)
             for id0 in data_players.keys():
                 player_info = data_players[id0]
                 if int(id0) != player_main.player:
@@ -609,5 +639,4 @@ while running:
     except Exception:
         # info = sock.recv(2 ** 20).decode()
         pass
-    # for player in players:
-    #     print(player.player, player.kills)
+pygame.quit()
