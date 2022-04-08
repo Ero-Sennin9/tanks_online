@@ -156,7 +156,7 @@ class Fire(AnimatedSprite):  # анимация пожара
         self.cur_frame %= self.count_frames
         self.time -= 1
         self.image = self.frames[self.cur_frame]
-        self.player.damage(0.089)  # урон от пожара
+        self.player.damage(0.089, self.player_id)  # урон от пожара
         if self.player.hp <= 0:
             players_inf[self.player_id].stat['kills'] += 1
         if self.time <= 0 or self.player.hp <= 0:  # уничтожение спрайта, если эффект окончен
@@ -207,11 +207,15 @@ class Tank(pg.sprite.Sprite):  # класс танка
             pygame.transform.scale(load_image('tank1.png'), (40, 55)),
             pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений игроков
 
-    def __init__(self, pos, rotation, player, control, time, shoot_button, name):
+    def __init__(self, pos, rotation, player, control, time, shoot_button, mail):
         super().__init__(players)
-        self.name = name
+        self.mail = mail
         self.stat = {'kills': 0,
-                     'deaths': 0}
+                     'deaths': 0,
+                     'hits': 0,
+                     'rik': 0,
+                     'damage': 0,
+                     'fires': 0}
         self.first_position = pos
         self.pos = pos
         self.shoot_button = shoot_button
@@ -269,7 +273,9 @@ class Tank(pg.sprite.Sprite):  # класс танка
                                                        self.rect.centery - self.reload_center[1] - 20, 20, 20),
                         0, angle, 5)  # состояние перезарядки
 
-    def damage(self, dam):  # нанесение урона танку
+    def damage(self, dam, sender_id):  # нанесение урона танку
+        if sender_id != None:
+            players_inf[sender_id].stat['damage'] += dam
         self.hp -= dam
 
     def return_tank(self):  # возвращение танка в начальную позицию
@@ -285,7 +291,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
         if pg.sprite.spritecollide(self, rocks, dokill=False,
                                    collided=pg.sprite.collide_mask):  # при столкновении с камнем снижается скорость и наносится урон
             self.slowing = 4
-            self.damage(0.02)
+            self.damage(0.02, None)
 
     def shoot_data(self, data):
         self.time = 0
@@ -321,21 +327,25 @@ class Patron(pg.sprite.Sprite):
                 else:
                     if self.collide_with_tank:
                         dam = self.dam[self.number1 % 4]
-                        elem.damage(dam)  # нанесение урона при обратном
+                        elem.damage(dam, self.player_id)  # нанесение урона при обратном
                         if elem.hp <= 0:
                             players_inf[self.player_id].stat['kills'] += 1
+                            elem.stat['deaths'] += 1
                         self.number1 += 1
                         if dam >= 20:  # попадание по танку
+                            players_inf[self.player_id].stat['hits'] += 1
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
-                            if random.randint(1, 2) == 1:  # c небольшой вероятностью вызывается пожар
+                            if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
                                 time_fire = random.randint(5 * FPS, 20 * FPS)
                                 Fire(elem, time_fire, self.player_id)
                                 fire = True
                                 elem.fire = [True, time_fire]
                                 elem.time_delete_fire = 0
+                                players_inf[self.player_id].stat['fires'] += 1
 
                         else:  # если произошел рикошет - меняем направление пули
+                            players_inf[self.player_id].stat['rik'] += 1
                             angle = self.angle_rik[self.number2 % 4]
                             self.number2 += 1
                             self.speed = (math.sin(math.radians(angle)) * SPEED_PATRON,
@@ -440,7 +450,7 @@ def get_all_hp(players):
 
 
 def get_all_logins(players):
-    return [el.name for el in players]
+    return [el.mail for el in players]
 
 
 time_for_reload = 0
@@ -508,7 +518,8 @@ while running:
             if 'pos' in login_or_inform and autorization:
                 data1[3] = login_or_inform
             if 'info' in login_or_inform:
-                new_socket.send(json.dumps({'error': 'Пока не придумано'}).encode())
+                players_stat = [[player0.mail, player0.stat] for player0 in players]
+                new_socket.send(json.dumps(players_stat).encode())
         except Exception:
             pass
 
@@ -529,7 +540,7 @@ while running:
             pole_info['players'][id]['velocity'] = player_info['velocity']
             pole_info['players'][id]['fire'] = players_inf[id].fire
             pole_info['players'][id]['kills'] = players_inf[id].stat['kills']
-            pole_info['players'][id]['login'] = players_inf[id].name
+            pole_info['players'][id]['mail'] = players_inf[id].mail
             if player_info['shoot'][0]:  # выстрел
                 if players_inf[id].time >= RELOAD * FPS:
                     dam = [random.randint(4, 10) if random.randint(1, 3) == 2 else random.randint(22, 30) for i in range(4)]  # рикошет или не рикошет + расчет урона
@@ -553,11 +564,11 @@ while running:
                         speed = (speedx ** 2 + speedy ** 2) ** 0.5
                         damage = (speed / (2 * (SPEED_TANK * 2) ** 2) ** 0.5) * 100
                         damage = random.choice([damage / 4, damage / 3, damage / 2, damage])
-                        player1.damage(damage), player2.damage(damage)  # нанесение урона при аварии
+                        player1.damage(damage, None), player2.damage(damage, None)  # нанесение урона при аварии
                         if damage >= 30:
                             Boom(*player1.rect.center), Boom(*player2.rect.center)  # взрывы при аварии
                         player1.colision, player2.colision = True, True
-                    player1.damage(0.03), player2.damage(0.03)  # урон при контакте
+                    player1.damage(0.03, None), player2.damage(0.03, None)  # урон при контакте
         else:
             player1.colision = False
 
@@ -601,6 +612,4 @@ while running:
         player0.rock_colision()
     clock.tick(FPS)
     # pg.display.flip()
-
-
 

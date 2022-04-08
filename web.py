@@ -5,15 +5,26 @@ from data.users import User
 from werkzeug.utils import redirect
 from forms.user_mars import LoginForm, RegisterForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
-from forms.job import JobsForm
-from data.jobs import Jobs
+from flask_restful import reqparse, abort, Api, Resource
+from data import tanks_restful
+from requests import get
+import json
+import threading
+from turbo_flask import Turbo
+from time import sleep
+from settings import SERVER_HOST, SERVER_PORT, SERVER_PORT_WEB
+import socket
 
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(days=365)
+turbo = Turbo(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+sock.connect((SERVER_HOST, int(SERVER_PORT)))
 
 
 def main():
@@ -48,27 +59,8 @@ def main():
     @app.route("/")
     def index():
         db_sess = db_session.create_session()
-        jobs = db_sess.query(Jobs).all()
         users = db_sess.query(User)
         return render_template("index8.html", jobs=[], users=users, User=User)
-
-    @app.route('/jobs', methods=['GET', 'POST'])
-    @login_required
-    def add_job():
-        form = JobsForm()
-        if form.validate_on_submit():
-            db_sess = db_session.create_session()
-            job = Jobs()
-            job.job = form.title.data
-            job.team_leader = form.teamleader_id.data
-            job.work_size = int(form.work_size.data)
-            job.collaborators = form.collaborators.data
-            job.is_finished = int(form.is_finished.data)
-            db_sess.add(job)
-            db_sess.commit()
-            return redirect('/')
-        return render_template('job.html', title='Добавление новости',
-                               form=form)
 
     @app.route('/register', methods=['GET', 'POST'])
     def reqister():
@@ -96,6 +88,25 @@ def main():
             db_sess.commit()
             return redirect('/login')
         return render_template('register.html', title='Регистрация', form=form)
+
+    @app.before_first_request
+    def before_first_request():
+        threading.Thread(target=update_load).start()
+
+    def inject_load():
+        try:
+            sock.send(json.dumps({'info': None}).encode())
+            info = json.loads(sock.recv(2**20).decode())
+        except Exception:
+            info = []
+        return info
+
+    def update_load():
+        with app.app_context():
+            while True:
+                # inject_load()
+                turbo.push(turbo.replace(render_template('loadvg.html', info=inject_load()), 'load'))
+                sleep(0.2)
 
     app.run()
 

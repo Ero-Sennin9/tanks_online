@@ -37,7 +37,7 @@ class Example(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.label_3.setText(f'<a href="http://{SERVER_HOST}:5000/register"> Регистрация </a>')
+        self.label_3.setText(f'<a href="http://{SERVER_HOST}:{SERVER_PORT}/register"> Регистрация </a>')
         self.label_3.setOpenExternalLinks(True)
         self.pushButton.clicked.connect(self.act)
         self.checkBox_3.stateChanged.connect(self.act2)
@@ -50,23 +50,25 @@ class Example(QMainWindow, Ui_MainWindow):
                 pass
         if 'password' in remember_info:
             self.lineEdit_2.setText(remember_info['password'])
-        if 'login' in remember_info:
-            self.lineEdit.setText(remember_info['login'])
+        if 'mail' in remember_info:
+            self.lineEdit.setText(remember_info['mail'])
 
     def act(self):
+        sock.send(json.dumps({'password': self.lineEdit_2.text(),
+                              'login': self.lineEdit.text()}).encode())
         try:
-            sock.send(json.dumps({'password': self.lineEdit_2.text(),
-                                  'login': self.lineEdit.text()}).encode())
             info_start = json.loads(sock.recv(2 ** 20).decode())
-            if 'id' in info_start:
-                global pole_info, login
-                pole_info = info_start
-                login = self.lineEdit.text()
-                self.close()
-            elif 'error' in info_start:
-                self.statusbar.showMessage(info_start['error'])
         except Exception:
-            pass
+            info_start = {}
+
+        print(info_start)
+        if 'id' in info_start:
+            global pole_info, login
+            pole_info = info_start
+            login = self.lineEdit.text()
+            self.close()
+        if 'error' in info_start:
+            self.statusbar.showMessage(info_start['error'])
         remember_data = {}
         with open('remember.txt', mode='rt') as file:
             try:
@@ -74,7 +76,7 @@ class Example(QMainWindow, Ui_MainWindow):
             except Exception:
                 pass
         if self.checkBox.isChecked():
-            remember_data['login'] = self.lineEdit.text()
+            remember_data['mail'] = self.lineEdit.text()
         if self.checkBox_2.isChecked():
             remember_data['password'] = self.lineEdit_2.text()
         with open('remember.txt', mode='wt') as file:
@@ -309,9 +311,9 @@ class Tank(pg.sprite.Sprite):  # класс танка
             pygame.transform.scale(load_image('tank1.png'), (40, 55)),
             pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений двух игроков
 
-    def __init__(self, pos, rotation, player, control, time, shoot_button, name):
+    def __init__(self, pos, rotation, player, control, time, shoot_button, mail):
         super().__init__(players)
-        self.name = name
+        self.mail = mail
         self.kills = 0
         self.first_position = pos
         self.pos = pos
@@ -439,7 +441,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
             text = font.render(str(self.kills), True, pygame.Color('red'))  # рендер текста
             text_x, text_y = (self.rect.centerx - self.reload_center[0] + 5, self.rect.centery - self.reload_center[1] - 30)  # размещение текста в верхнем левом углу
             screen.blit(text, (text_x, text_y))  # отображение текста
-            text = font3.render(self.name, True, pygame.Color('green'))  # рендер текста
+            text = font3.render(self.mail, True, pygame.Color('green'))  # рендер текста
             text_x, text_y = (self.rect.centerx - self.reload_center[0] + 10,
                           self.rect.centery - self.reload_center[1] - 45)  # размещение текста в верхнем левом углу
             screen.blit(text, (text_x, text_y))  # отображение текста
@@ -501,6 +503,7 @@ class Patron(pg.sprite.Sprite):
 
                         else:  # если произошел рикошет - меняем направление пули
                             elem.rik_sounds.queue(rik_sound1), elem.rik_sounds.queue(rik_sound2)  # звук рикошета
+
                             angle = self.angle_rik[self.number2 % 4]
                             self.number2 += 1
                             self.speed = (math.sin(math.radians(angle)) * SPEED_PATRON,
@@ -609,7 +612,7 @@ while running:
                 if int(id0) != player_main.player:
                     if id0 not in players_inf:
                         players_inf[id0] = Tank(player_info['pos'], 90, int(id0), [pg.K_w, pg.K_d, pg.K_s, pg.K_a],
-                                               RELOAD * FPS, pg.KEYDOWN, player_info['login'])
+                                               RELOAD * FPS, pg.KEYDOWN, player_info['mail'])
                     players_inf[id0].hp = player_info['hp']
                     players_inf[id0].rotate(player_info['angle'])
                     players_inf[id0].rect.center = player_info['pos']
