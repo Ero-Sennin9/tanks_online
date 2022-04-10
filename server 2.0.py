@@ -525,7 +525,7 @@ while running:
                                                   'size': SIZE},
                                      'angle': angles[id % MAX_PLAYERS]}
                             new_socket.send(json.dumps(json1).encode())
-                            # time.sleep(3)
+                            time.sleep(3)
                         else:
                             new_socket.send(json.dumps({'error': 'Сервер заполнен'}).encode())
                     else:
@@ -607,17 +607,17 @@ while running:
         except Exception:
             data2[2] += 1
         if data2[2] >= ERRORS:
-            id, new_socket, errors, data, autorization, login, nickname = data2
-            stat = db_sess.query(Stats).filter(Stats.player_mail == login).first()
-            print(players_inf[id].stat)
-            stat.kills += players_inf[id].stat['kills']
-            stat.deaths += players_inf[id].stat['deaths']
-            stat.fires += players_inf[id].stat['fires']
-            stat.hits += players_inf[id].stat['hits']
-            stat.rik += players_inf[id].stat['rik']
-            stat.damage += round(players_inf[id].stat['damage'], 2)
-            db_sess.commit()
             try:
+                id, new_socket, errors, data, autorization, login, nickname = data2
+                stat = db_sess.query(Stats).filter(Stats.player_mail == login).first()
+                print(players_inf[id].stat)
+                stat.kills += players_inf[id].stat['kills']
+                stat.deaths += players_inf[id].stat['deaths']
+                stat.fires += players_inf[id].stat['fires']
+                stat.hits += players_inf[id].stat['hits']
+                stat.rik += players_inf[id].stat['rik']
+                stat.damage += round(players_inf[id].stat['damage'], 2)
+                db_sess.commit()
                 players_inf[data2[0]].kill()
                 del players_inf[data2[0]]
                 del pole_info['players'][data2[0]]

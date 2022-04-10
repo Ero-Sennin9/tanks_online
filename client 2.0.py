@@ -56,22 +56,23 @@ class Example(QMainWindow, Ui_MainWindow):
             self.lineEdit.setText(remember_info['mail'])
 
     def act(self):
-        sock.send(json.dumps({'password': self.lineEdit_2.text(),
-                              'login': self.lineEdit.text()}).encode())
-        try:
-            info_start = json.loads(sock.recv(2 ** 20).decode())
-        except Exception:
-            info_start = {}
+        for i in range(4):
+            sock.send(json.dumps({'password': self.lineEdit_2.text(),
+                                  'login': self.lineEdit.text()}).encode())
+            try:
+                info_start = json.loads(sock.recv(2 ** 20).decode())
+            except Exception:
+                info_start = {}
 
-        if 'id' in info_start:
-            global pole_info, login, password
-            pole_info = info_start
-            login = self.lineEdit.text()
-            password = self.lineEdit_2.text()
-            self.close()
-        if 'error' in info_start:
-            self.statusbar.showMessage(info_start['error'])
-        remember_data = {}
+            if 'id' in info_start:
+                global pole_info, login, password
+                pole_info = info_start
+                login = self.lineEdit.text()
+                password = self.lineEdit_2.text()
+                self.close()
+            if 'error' in info_start:
+                self.statusbar.showMessage(info_start['error'])
+            remember_data = {}
         with open('remember.txt', mode='rt') as file:
             try:
                 remember_data = json.load(file)
