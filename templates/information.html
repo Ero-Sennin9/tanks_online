@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 align="right">Information</h1>
+
+<div id="carouselExampleControls" class="carousel slide" data-bs-ride="carousel">
+  <div class="carousel-inner">
+        <div class="carousel-item active" align="center">
+            <div class="col-md6 border rounded">
+        <h1>Управление</h1>
+        <ul class="list-group">
+             <li class="list-group-item">L - Вход/выход из полноэкранного режима</li>
+             <li class="list-group-item">W, A, S, D - Управление танком</li>
+             <li class="list-group-item">ЛКМ, ПКМ - Выстрел из танка</li>
+        </ul>
+       </div>
+    </div>
+    <div class="carousel-item" align="center">
+        <div class="col-md6 border rounded">
+      <h1>Правила</h1>
+        <ol class="list-group list-group-numbered">
+            <li class="list-group-item">Игра продалжается до тех пор, пока не останется один выживший</li>
+            <li class="list-group-item">Столкновение с камнями и с другими танками - получение урона</li>
+            <li class="list-group-item">При попадании снарядом по танку могут быть вызваны: рикошет, попадание, пожар</li>
+            <ul class="list-group">
+                <li class="list-group-item">Рикошет - нанесение небольшого урон + пуля меняет свою траекторию</li>
+                <li class="list-group-item">Попадание - нанесение урона</li>
+                <li class="list-group-item">Пожар - в течение какого-то времени будет наносится урон от огня</li>
+            </ul>
+        </ol>
+            </div>
+    </div>
+  </div>
+  <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="prev">
+    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+    <span class="visually-hidden"></span>
+  </button>
+  <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleControls" data-bs-slide="next">
+    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+    <span class="visually-hidden"></span>
+  </button>
+</div>
+
+{% endblock %}

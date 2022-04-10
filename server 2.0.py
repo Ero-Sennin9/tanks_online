@@ -8,6 +8,7 @@ import pygame.sprite
 import math
 
 from data.users import User
+from data.stats import Stats
 
 from data import db_session
 from settings import SERVER_HOST, SERVER_PORT
@@ -534,7 +535,7 @@ while running:
             if 'pos' in login_or_inform and autorization:
                 data1[3] = login_or_inform
             if 'info' in login_or_inform:
-                players_stat = [[player0.mail, player0.nickname, player0.stat] for player0 in players]
+                players_stat = [[player0.mail, player0.nickname, player0.stat, player0.hp] for player0 in players]
                 new_socket.send(json.dumps(players_stat).encode())
             if 'exit' in login_or_inform:
                 print(login_or_inform['exit'])
@@ -606,7 +607,16 @@ while running:
         except Exception:
             data2[2] += 1
         if data2[2] >= ERRORS:
-            print(data2)
+            id, new_socket, errors, data, autorization, login, nickname = data2
+            stat = db_sess.query(Stats).filter(Stats.player_mail == login).first()
+            print(players_inf[id].stat)
+            stat.kills += players_inf[id].stat['kills']
+            stat.deaths += players_inf[id].stat['deaths']
+            stat.fires += players_inf[id].stat['fires']
+            stat.hits += players_inf[id].stat['hits']
+            stat.rik += players_inf[id].stat['rik']
+            stat.damage += round(players_inf[id].stat['damage'], 2)
+            db_sess.commit()
             try:
                 players_inf[data2[0]].kill()
                 del players_inf[data2[0]]

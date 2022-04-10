@@ -4,6 +4,7 @@
                 <tr class="table-secondary">
                     <th scope="col">#</th>
                     <th scope="col">Пользователь</th>
+                    <th scope="col">Здоровье</th>
                     <th scope="col">K/D</th>
                     <th scope="col">Убийства</th>
                     <th scope="col">Смерти</th>
@@ -18,9 +19,16 @@
                     {% set mail = data[0] %}
                     {% set nickname = data[1] %}
                     {% set stat = data[2] %}
+                    {% set hp = data[3] %}
+                    {% set id0 = data[4] %}
                     <tr class="table-primary">
                         <td scope="row">{{loop.index}}</td>
-                        <td>{{nickname}}</td>
+                        <td><a href="/player/{{id0}}">{{nickname}}</a></td>
+                        <td>
+                            <div class="progress">
+                                 <div class="progress-bar bg-success" role="progressbar" style="width: {% if hp < 0%}0{%else%}{{hp}}{%endif%}%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </td>
                         <td>{{stat['KD']}}</td>
                         <td>{{stat['kills']}}</td>
                         <td>{{stat['deaths']}}</td>

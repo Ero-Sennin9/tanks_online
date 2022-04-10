@@ -11,6 +11,7 @@ from time import sleep
 import threading
 import json
 import socket
+from data.stats import Stats
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(
@@ -40,7 +41,8 @@ def main():
                 deaths = 1 if info[i][2]['deaths'] == 0 else info[i][2]['deaths']
                 info[i][2]['KD'] = round(info[i][2]['kills'] / deaths, 2)
                 info[i][2]['damage'] = round(info[i][2]['damage'], 2)
-            print(info)
+                user = db_sess.query(User).filter(User.email == info[i][0]).first()
+                info[i].append(user.id)
         except Exception:
             info = []
         return info
@@ -54,7 +56,6 @@ def main():
 
     @login_manager.user_loader
     def load_user(user_id):
-        db_sess = db_session.create_session()
         return db_sess.query(User).get(user_id)
 
     @app.route('/logout')
@@ -67,7 +68,6 @@ def main():
     def login():
         form = LoginForm()
         if form.validate_on_submit():
-            db_sess = db_session.create_session()
             user = db_sess.query(User).filter(User.email == form.email.data).first()
             if user and user.check_password(form.password.data):
                 login_user(user, remember=form.remember_me.data)
@@ -79,7 +79,20 @@ def main():
 
     @app.route("/")
     def index():
-        return render_template("index9.html")
+        return render_template("players.html")
+
+    @app.route("/info")
+    def info():
+        return render_template("information.html")
+
+    @app.route("/player/<int:id>")
+    def player(id):
+        user = db_sess.query(User).filter(User.id == id).first()
+
+        stat = db_sess.query(Stats).filter(Stats.player_mail == user.email).first()
+        deaths = 1 if stat.deaths == 0 else stat.deaths
+        kd = round(stat.kills / deaths, 2)
+        return render_template("player.html", stat=stat, kd=kd, user=user)
 
     @app.route('/register', methods=['GET', 'POST'])
     def reqister():
@@ -103,8 +116,10 @@ def main():
                 age=int(form.age.data),
                 email=form.email.data,
                 nickname=form.nickname.data)
+            stat = Stats(player_mail=form.email.data, kills=0, deaths=0, damage=0, hits=0, rik=0, fires=0)
             user.set_password(form.password.data)
             db_sess.add(user)
+            db_sess.add(stat)
             db_sess.commit()
             return redirect('/login')
         return render_template('register.html', title='Регистрация', form=form)

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script type="text/javascript">
+if (window.location.href.indexOf('reload')==-1) {
+    window.location.replace(window.location.href+'?reload');
+}
+</script>
+<div class="col-md6 border rounded" align="center" id="load">
+<img src="https://ob-kassa.ru/content/front/buhoskol_tmp1/images/reviews-icon.jpg" class="img-thumbnail" height="190px" width="190px" align="left">
+
+<div class="list-group">
+  <button type="button" class="list-group-item list-group-item-action active" aria-current="true">
+    <h1>{{user.nickname}}</h1>
+  </button>
+    <table class="table">
+       <thead>
+           <tr class="table-secondary">
+             <th scope="col">K/D</th>
+             <th scope="col">{{kd}}</th>
+           </tr>
+       </thead>
+       <tbody>
+       <tr>
+         <th rowspan="2">Зарегистрирован {{user.modified_date}}</th>
+       </tr>
+       </tbody>
+    </table>
+</div>
+
+  <table class="table" align="center">
+     <tbody>
+     <tr class="table-primary">
+       <td scope="row">Kills</td>
+       <td>{{stat.kills}}</td>
+     </tr>
+     <tr class="table-primary">
+       <td scope="row">Deaths</td>
+       <td>{{stat.deaths}}</td>
+     </tr>
+     <tr class="table-primary">
+       <td scope="row">Damage</td>
+       <td>{{stat.damage}}</td>
+     </tr>
+     <tr class="table-primary">
+       <td scope="row">Fires</td>
+       <td>{{stat.fires}}</td>
+     </tr>
+     <tr class="table-primary">
+       <td scope="row">Hits</td>
+       <td>{{stat.hits}}</td>
+     </tr>
+     <tr class="table-primary">
+       <td scope="row">Ricochets</td>
+       <td>{{stat.rik}}</td>
+     </tr>
+     </tbody>
+  </table>
+</div>
+{% endblock %}
