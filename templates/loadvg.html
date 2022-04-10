@@ -38,6 +38,12 @@
                         <td>{{stat['fires']}}</td>
                     </tr>
                     {% endfor %}
+                    {% if not info%}
+                    <tr class="table-primary">
+                        <th colspan="10" align="center">Пока никто не зашел в игру</th>
+                    </tr>
+                    {% endif%}
+
                 </tbody>
             </table>
 </div>
