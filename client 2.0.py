@@ -61,7 +61,7 @@ class Example(QMainWindow, Ui_MainWindow):
                                   'login': self.lineEdit.text()}).encode())
             try:
                 info_start = json.loads(sock.recv(2 ** 20).decode())
-                sleep(10)
+                sleep(5)
             except Exception:
                 info_start = {}
 
