@@ -6,6 +6,7 @@ import json
 import pygame as pg
 from win32api import GetSystemMetrics
 from time import sleep
+from requests import get
 
 from data import db_session
 from settings import SERVER_HOST, SERVER_PORT, SERVER_PORT_WEB
@@ -61,7 +62,7 @@ class Example(QMainWindow, Ui_MainWindow):
                                   'login': self.lineEdit.text()}).encode())
             try:
                 info_start = json.loads(sock.recv(2 ** 20).decode())
-                sleep(5)
+                sleep(0.5)
             except Exception:
                 info_start = {}
 
@@ -98,12 +99,13 @@ if True:  # окно авторизации
     ex = Example()
     ex.show()
     app.exec()
+    positions = get(f'http://{SERVER_HOST}:{SERVER_PORT_WEB}/api/getpos').json()
     if not pole_info:
         sys.exit()
     if 'id' in pole_info:
         player_id = pole_info['id']
-    if 'pos' in pole_info:
-        player_pos = pole_info['pos']
+    if 'pos' in positions:
+        player_pos = positions['pos'][player_id % positions['max_players']]
     if 'angle' in pole_info:
         player_angle = pole_info['angle']
     if 'settings' in pole_info:
@@ -117,8 +119,8 @@ if True:  # окно авторизации
         TANK_A = round(TANK_A0, 1)
         SIZE = WIDTH, HEIGHT = pole_info['settings']['size']
 
-    if 'generation' in pole_info:
-        rocks_pos, grasses_pos = pole_info['generation'][0], pole_info['generation'][1]
+    if 'generation' in positions:
+        rocks_pos, grasses_pos = positions['generation'][0], positions['generation'][1]
 
   # настройки pygame
 x = 100

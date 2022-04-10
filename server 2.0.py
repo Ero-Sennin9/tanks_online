@@ -7,6 +7,7 @@ import random
 import pygame.sprite
 import math
 
+
 from data.users import User
 from data.stats import Stats
 
@@ -450,6 +451,12 @@ for player in players:
 
 print(positions)
 players_information = []
+write_inf = {'pos': positions,
+             'generation': data_rocks_grass,
+             'max_players': MAX_PLAYERS}
+with open('pos.txt', mode='wt') as file:
+    file.seek(0)
+    json.dump(write_inf, file)
 pole = load_image('pole.jpg')  # загрузка изображения игрового поля
 game = True  # статус игры
 font, font2 = pg.font.Font(None, 50), pg.font.Font(None, 36)  # шрифты для текста
@@ -513,8 +520,6 @@ while running:
                             data1[5] = login_or_inform['login']
                             data1[6] = user.nickname
                             json1 = {'id': id,
-                                     'generation': data_rocks_grass,
-                                     'pos': positions[id % MAX_PLAYERS],
                                      'settings': {'fps': FPS,
                                                   'speed_tank': SPEED_TANK,
                                                   'speed_patron': SPEED_PATRON,

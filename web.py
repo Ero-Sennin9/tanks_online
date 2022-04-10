@@ -6,17 +6,21 @@ from werkzeug.utils import redirect
 from forms.user_tanks import LoginForm, RegisterForm
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from settings import SERVER_HOST, SERVER_PORT, SERVER_PORT_WEB
+from flask_restful import reqparse, abort, Api, Resource
 from turbo_flask import Turbo
 from time import sleep
 import threading
 import json
 import socket
 from data.stats import Stats
+from data.api import GetPos
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'yandexlyceum_secret_key'
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(
     days=365
 )
+api = Api(app)
+api.add_resource(GetPos, '/api/getpos')
 login_manager = LoginManager()
 login_manager.init_app(app)
 turbo = Turbo(app)
