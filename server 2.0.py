@@ -525,7 +525,7 @@ while running:
                                                   'size': SIZE},
                                      'angle': angles[id % MAX_PLAYERS]}
                             new_socket.send(json.dumps(json1).encode())
-                            time.sleep(3)
+                            # time.sleep(3)
                         else:
                             new_socket.send(json.dumps({'error': 'Сервер заполнен'}).encode())
                     else:
