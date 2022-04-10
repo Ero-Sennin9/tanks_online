@@ -124,7 +124,7 @@ def main():
             return redirect('/login')
         return render_template('register.html', title='Регистрация', form=form)
 
-    app.run()
+    app.run(host=SERVER_HOST, port=int(SERVER_PORT_WEB))
 
 
 if __name__ == '__main__':
