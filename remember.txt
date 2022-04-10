@@ -1,1 +1,1 @@
-{"mail": "deniskolesnikov0404040405@mail.ru", "password": "123"}
+{"mail": "deniskolesnikov358@gmail.com", "password": "123"}

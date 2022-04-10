@@ -4,10 +4,11 @@ import math, random
 import pygame
 import json
 import pygame as pg
+from win32api import GetSystemMetrics
 from time import sleep
 
 from data import db_session
-from settings import SERVER_HOST, SERVER_PORT
+from settings import SERVER_HOST, SERVER_PORT, SERVER_PORT_WEB
 import os
 from untitled import Ui_MainWindow
 from PyQt5.QtWidgets import QMainWindow, QApplication
@@ -31,13 +32,14 @@ fires = pg.sprite.Group()
 pole_info = {}
 
 login = None  # логин игрока
+password = None  # логин игрока
 
 
 class Example(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        self.label_3.setText(f'<a href="http://{SERVER_HOST}:{SERVER_PORT}/register"> Регистрация </a>')
+        self.label_3.setText(f'<a href="http://{SERVER_HOST}:{SERVER_PORT_WEB}/register"> Регистрация </a>')
         self.label_3.setOpenExternalLinks(True)
         self.pushButton.clicked.connect(self.act)
         self.checkBox_3.stateChanged.connect(self.act2)
@@ -61,11 +63,11 @@ class Example(QMainWindow, Ui_MainWindow):
         except Exception:
             info_start = {}
 
-        print(info_start)
         if 'id' in info_start:
-            global pole_info, login
+            global pole_info, login, password
             pole_info = info_start
             login = self.lineEdit.text()
+            password = self.lineEdit_2.text()
             self.close()
         if 'error' in info_start:
             self.statusbar.showMessage(info_start['error'])
@@ -111,6 +113,8 @@ if True:  # окно авторизации
         RELOAD = pole_info['settings']['reload']
         SLOWING = pole_info['settings']['slowing']
         TANK_A = round(TANK_A0, 1)
+        SIZE = WIDTH, HEIGHT = pole_info['settings']['size']
+
     if 'generation' in pole_info:
         rocks_pos, grasses_pos = pole_info['generation'][0], pole_info['generation'][1]
 
@@ -120,8 +124,12 @@ y = 45
 os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
 os.environ['SDL_VIDEO_CENTERED'] = '0'
 pg.init()
-SIZE = WIDTH, HEIGHT = 1500, 700
-screen = pg.display.set_mode(SIZE)
+screen = pg.Surface(SIZE)
+# screen2 = pg.display.set_mode(SIZE_WINDOW)
+SIZE_WINDOW = (GetSystemMetrics(0) / 2, GetSystemMetrics(1) / 2)
+screen2 = pygame.display.set_mode(SIZE_WINDOW)
+
+
 pg.display.set_caption('Tanks_online(epic)')
 clock = pg.time.Clock()
 fire = False  # наличие огня
@@ -167,6 +175,7 @@ class Grass(pg.sprite.Sprite):  # класс куста
         self.image = self.grass
         self.rect = self.image.get_rect()
         self.rect.center = pos
+
 
 for pos1 in rocks_pos:
     all_sprites.add(Stone(pos1))
@@ -273,10 +282,8 @@ class Fire(AnimatedSprite):  # анимация пожара
         self.cur_frame = self.cur_frame + 1
         self.cur_frame %= self.count_frames
         self.time -= 1
-        if self.time <= 0:  # уничтожение спрайта, если эффект окончен
+        if self.time <= 0 or self.player.hp <= 0:  # уничтожение спрайта, если эффект окончен
             self.kill()
-            fire = False
-            pojar_channel.pause()  # остановка пожара
         self.image = self.frames[self.cur_frame]
         self.player.damage(0.089)  # урон от пожара
 
@@ -302,7 +309,6 @@ class HealthBar(pg.sprite.Sprite):  # класс полоски здоровья
         self.image.set_colorkey(pygame.Color("white"))
         self.image = self.image.convert_alpha()
         self.rect.center = player.rect.centerx, player.rect.centery - self.height  # рисование полоски с учетом высоты
-
 
 
 class Tank(pg.sprite.Sprite):  # класс танка
@@ -338,7 +344,7 @@ class Tank(pg.sprite.Sprite):  # класс танка
         self.colision = False
         self.boom_sounds = pygame.mixer.Channel(1)
         self.rik_sounds = pygame.mixer.Channel(2)
-        self.player_inf = {'pos': self.first_position, # информация, идущая на сервер
+        self.player_inf = {'pos': self.first_position,  # информация, идущая на сервер
                            'shoot': [None, None]}
 
     def change_id(self, id_player):
@@ -395,11 +401,11 @@ class Tank(pg.sprite.Sprite):  # класс танка
 
         if self.rect.centerx >= WIDTH - 20 and self.velocity[0] > 0:  # танк не может уйти за границы карты
             self.velocity[0] = 0
-        elif self.rect.centery >= HEIGHT - 20 and self.velocity[1] > 0:
+        if self.rect.centery >= HEIGHT - 20 and self.velocity[1] > 0:
             self.velocity[1] = 0
         if self.rect.centerx <= 20 and self.velocity[0] < 0:
             self.velocity[0] = 0
-        elif self.rect.centery <= 20 and self.velocity[1] < 0:
+        if self.rect.centery <= 20 and self.velocity[1] < 0:
             self.velocity[1] = 0
 
         self.rect.move_ip(self.velocity[0] / self.slowing,
@@ -526,23 +532,40 @@ class Patron(pg.sprite.Sprite):
 
 
 pole = load_image('pole.jpg')  # загрузка изображения игрового поля
+
 game = True  # статус игры
-font, font2, font3 = pg.font.Font(None, 50), pg.font.Font(None, 36), pg.font.Font(None, 18)  # шрифты для текста
+time_for_quit = 0
+fullscreen = False
+font, font2, font3 = pg.font.Font(None, 50), pg.font.Font(None, 36), pg.font.Font(None, 23)  # шрифты для текста
 
 player_main = Tank(player_pos, player_angle, player_id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.MOUSEBUTTONDOWN, login)  # создание игрока
+
+
+screen3 = pygame.Surface(SIZE)
+for j in range(0, HEIGHT % pole.get_height() + 2):
+    pole = pygame.transform.flip(pole, False, True)
+    for i in range(0, WIDTH % pole.get_width() + 2):
+        screen3.blit(pole, (i * pole.get_width(), j * pole.get_height()))
+
 
 all_sprites.add(player_main)
 
 
-while running:
+while running and time_for_quit <= 3:
     time += 1  # время для замедления анимаций из-за большого числа кадров
     if time % 4 == 0:
         player_main.player_inf['shoot'][0] = False
+    if fires:
+        fire = True
+    else:
+        fire = False
     if fire:
         if pojar_channel.get_queue():  # звук пожара
             pojar_channel.unpause()
         else:
             pojar_channel.queue(pojar)
+    else:
+        pojar_channel.pause()
     for player in players:
         if player.hp <= 0 and game:
             pygame.mixer.Sound.play(game_over)
@@ -552,6 +575,13 @@ while running:
             running = False
         if event.type == player_main.shoot_button and game and player_main.time >= RELOAD * FPS and player_main.hp > 0:
             player_main.shoot()
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_l:
+                fullscreen = not fullscreen
+                if fullscreen:
+                    screen2 = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+                else:
+                    screen2 = pygame.display.set_mode(SIZE_WINDOW)
     if reload:  # перезагрузка игры
         pojar_channel.pause()  # остановка пожара
         game = True
@@ -581,28 +611,37 @@ while running:
     player_main.player_inf['pos'] = player_main.rect.center
     # if player_main['shoot'][0]:
     #     time = 0
-    sock.send(json.dumps(player_main.player_inf).encode())  # отправление информации о игроке
-    screen.blit(pole, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
+    if running:
+        sock.send(json.dumps(player_main.player_inf).encode())  # отправление информации о игроке
+    else:
+        time += 1
+        exit0 = {'exit': [login, password]}
+        sock.send(json.dumps(exit0).encode())
+    screen.blit(screen3, (0, 0)), rocks.draw(screen), players.draw(screen)  # отрисовка кадра
     patrons.draw(screen), fires.draw(screen), grasses.draw(screen), health.draw(screen), boom.draw(screen)
+    if time % 2 == 0:
+        boom.update()
+        fires.update()
+    players.update(), patrons.update()  # обновление спрайтов(анимация, движение, взрывы, обновление полоски здоровья)
+    clock.tick(FPS)
+    size_window = screen2.get_size()
+    coords = -player_main.rect.centerx + size_window[0] / 2, -player_main.rect.centery + size_window[1] / 2
+    coords = coords[0] if coords[0] > -WIDTH + size_window[0] else -WIDTH + size_window[0], coords[1] if coords[1] > -HEIGHT + size_window[1] else -HEIGHT + size_window[1]
+    coords = coords[0] if coords[0] < 0 else 0, coords[1] if coords[1] < 0 else 0
+    screen2.blit(screen, coords)
     if not game:  # если игра окончена, выводится сообщение с результатом
         text = font.render(f'Игра окончена', True, pygame.Color('red'))  # рендер текста
         text2 = font2.render('Ждите перезапуска', True, pygame.Color('yellow'))
-        text_x = WIDTH // 2 - text.get_width() // 2  # размещение текста в центре экрана
-        text_y = HEIGHT // 2 - text.get_height() // 2
-        screen.blit(text, (text_x, text_y))  # отображение текста
-        screen.blit(text2, (text_x, text_y + 50))
+        text_x = screen2.get_width() // 2 - text.get_width() // 2  # размещение текста в центре экрана
+        text_y = screen2.get_height() // 2 - text.get_height() // 2
+        screen2.blit(text, (text_x, text_y))  # отображение текста
+        screen2.blit(text2, (text_x, text_y + 50))
     else:
         result = []
     text = font.render(f'Убийств: {player_main.kills}', True, pygame.Color('green'))  # рендер текста
     text_x, text_y = text.get_width() // 8, text.get_height() // 2  # размещение текста в верхнем левом углу
-    screen.blit(text, (text_x, text_y))  # отображение текста
-    players.update(), patrons.update()  # обновление спрайтов(анимация, движение, взрывы, обновление полоски здоровья)
-    if time % 2 == 0:
-        boom.update()
-        fires.update()
-    clock.tick(FPS)
+    screen2.blit(text, (text_x, text_y))  # отображение текста
     pg.display.flip()  # обновление дисплея
-
     try:  # принятие информации о поле
         info = json.loads(sock.recv(2 ** 20).decode())
         if 'players' in info:
@@ -612,7 +651,7 @@ while running:
                 if int(id0) != player_main.player:
                     if id0 not in players_inf:
                         players_inf[id0] = Tank(player_info['pos'], 90, int(id0), [pg.K_w, pg.K_d, pg.K_s, pg.K_a],
-                                               RELOAD * FPS, pg.KEYDOWN, player_info['mail'])
+                                               RELOAD * FPS, pg.KEYDOWN, player_info['nickname'])
                     players_inf[id0].hp = player_info['hp']
                     players_inf[id0].rotate(player_info['angle'])
                     players_inf[id0].rect.center = player_info['pos']

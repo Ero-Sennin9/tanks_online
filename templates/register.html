@@ -2,6 +2,11 @@
 
 {% block content %}
 <h1>Регистрация</h1>
+<script type="text/javascript">
+if (window.location.href.indexOf('reload')==-1) {
+    window.location.replace(window.location.href+'?reload');
+}
+</script>
 <form action="" method="post">
     {{ form.hidden_tag() }}
     <p>
@@ -26,6 +31,15 @@
         {{ form.password_again.label }}<br>
         {{ form.password_again(class="form-control", type="password") }}<br>
         {% for error in form.password_again.errors %}
+            <p class="alert alert-danger" role="alert">
+                {{ error }}
+            </p>
+        {% endfor %}
+    </p>
+    <p>
+        {{ form.nickname.label }}<br>
+        {{ form.nickname(class="form-control") }}<br>
+        {% for error in form.nickname.errors %}
             <p class="alert alert-danger" role="alert">
                 {{ error }}
             </p>
@@ -58,25 +72,7 @@
             </p>
         {% endfor %}
     </p>
-    <p>
-        {{ form.position.label }}<br>
-        {{ form.position(class="form-control") }}<br>
-        {% for error in form.position.errors %}
-            <p class="alert alert-danger" role="alert">
-                {{ error }}
-            </p>
-        {% endfor %}
-    </p>
-    <p>
-        {{ form.speciality.label }}<br>
-        {{ form.speciality(class="form-control") }}<br>
-        {% for error in form.speciality.errors %}
-            <p class="alert alert-danger" role="alert">
-                {{ error }}
-            </p>
-        {% endfor %}
-    </p>
     <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
-    {{message}}
+    {{ message }}
 </form>
 {% endblock %}
