@@ -36,6 +36,11 @@ def main():
         try:
             sock.send(json.dumps({'info': None}).encode())
             info = json.loads(sock.recv(2 ** 20).decode())
+            for i in range(len(info)):
+                deaths = 1 if info[i][2]['deaths'] == 0 else info[i][2]['deaths']
+                info[i][2]['KD'] = round(info[i][2]['kills'] / deaths, 2)
+                info[i][2]['damage'] = round(info[i][2]['damage'], 2)
+            print(info)
         except Exception:
             info = []
         return info

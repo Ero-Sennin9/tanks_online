@@ -9,6 +9,11 @@ if (window.location.href.indexOf('reload')==-1) {
 </script>
 <form action="" method="post">
     {{ form.hidden_tag() }}
+    {% if message %}
+        <div class="alert alert-danger" role="alert">
+        {{ message }}
+        </div>
+    {% endif %}
     <p>
         {{ form.email.label }}<br>
         {{ form.email(class="form-control", type="email") }}<br>
@@ -73,6 +78,5 @@ if (window.location.href.indexOf('reload')==-1) {
         {% endfor %}
     </p>
     <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
-    {{ message }}
 </form>
 {% endblock %}

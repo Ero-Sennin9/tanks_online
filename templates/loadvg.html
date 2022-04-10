@@ -1,13 +1,10 @@
 <div id="load">
-{% for data in info%}
-    {% set mail = data[0] %}
-    {% set stat = data[1] %}
-    <div class="col-md6 border rounded">
-        <h2>Player # {{loop.index}}</h2>
-        <table class="table">
-            <thead>
+            <table class="table">
+                <thead>
                 <tr class="table-secondary">
-                    <th scope="col">Почта</th>
+                    <th scope="col">#</th>
+                    <th scope="col">Пользователь</th>
+                    <th scope="col">K/D</th>
                     <th scope="col">Убийства</th>
                     <th scope="col">Смерти</th>
                     <th scope="col">Попадания</th>
@@ -15,20 +12,24 @@
                     <th scope="col">Урона нанесено</th>
                     <th scope="col">Вызвано пожаров</th>
                 </tr>
-            </thead>
-            <tbody>
-            <tr class="table-primary">
-                <td scope="row">{{mail}}
-                </td>
-                <td>{{stat['kills']}}</td>
-                <td>{{stat['deaths']}}</td>
-                <td>{{stat['hits']}}</td>
-                <td>{{stat['rik']}}</td>
-                <td>{{stat['damage']}}</td>
-                <td>{{stat['fires']}}</td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    {% endfor %}
+                </thead>
+                <tbody>
+                    {% for data in info%}
+                    {% set mail = data[0] %}
+                    {% set nickname = data[1] %}
+                    {% set stat = data[2] %}
+                    <tr class="table-primary">
+                        <td scope="row">{{loop.index}}</td>
+                        <td>{{nickname}}</td>
+                        <td>{{stat['KD']}}</td>
+                        <td>{{stat['kills']}}</td>
+                        <td>{{stat['deaths']}}</td>
+                        <td>{{stat['hits']}}</td>
+                        <td>{{stat['rik']}}</td>
+                        <td>{{stat['damage']}}</td>
+                        <td>{{stat['fires']}}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
 </div>

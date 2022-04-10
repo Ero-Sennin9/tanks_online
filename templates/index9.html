@@ -3,9 +3,24 @@
 {% block content %}
 {{ turbo() }}
 <h1 align="center">Players in game</h1>
-<div class="col-md6 border rounded" id="load" align="center">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden"></span>
-    </div>
+<div class="col-md6 border rounded" align="center" id="load">
+    <table class="table">
+            <thead>
+                <tr class="table-secondary">
+                    <th scope="col">#</th>
+                    <th scope="col">Пользователь</th>
+                    <th scope="col">K/D</th>
+                    <th scope="col">Убийства</th>
+                    <th scope="col">Смерти</th>
+                    <th scope="col">Попадания</th>
+                    <th scope="col">Рикошеты</th>
+                    <th scope="col">Урона нанесено</th>
+                    <th scope="col">Вызвано пожаров</th>
+                </tr>
+            </thead>
+        </table>
+        <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden"></span>
+        </div>
 </div>
 {% endblock %}

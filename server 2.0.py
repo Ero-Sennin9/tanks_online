@@ -40,7 +40,7 @@ clock = pg.time.Clock()
 SPEED_TANK = 4.2  # максимальная скорость танка
 SPEED_PATRON = 14  # скорость патрона
 TANK_A0 = 0.16
-FIRE_RAND = 2
+FIRE_RAND = 10
 TANK_A = round(TANK_A0, 1)  # ускорение танка при нажатии на кнопки движения
 GRASS_STONES = (80, 80)  # размер камней и травы
 RELOAD = 4  # время перезарядки
@@ -208,9 +208,10 @@ class Tank(pg.sprite.Sprite):  # класс танка
             pygame.transform.scale(load_image('tank1.png'), (40, 55)),
             pygame.transform.scale(load_image('tank2.png'), (40, 55))]  # загрузка изображений игроков
 
-    def __init__(self, pos, rotation, player, control, time, shoot_button, mail):
+    def __init__(self, pos, rotation, player, control, time, shoot_button, mail, nickname):
         super().__init__(players)
         self.mail = mail
+        self.nickname = nickname
         self.is_rock_colision = False
         self.stat = {'kills': 0,
                      'deaths': 0,
@@ -380,7 +381,7 @@ class Patron(pg.sprite.Sprite):
 
 class Tank2(Tank):  # класс танка для задания позиций игроков в начале игры
     def __init__(self, pos, rotation):
-        super().__init__(pos, rotation, 1, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.KEYDOWN, 'gen')
+        super().__init__(pos, rotation, 1, [pg.K_w, pg.K_d, pg.K_s, pg.K_a], RELOAD * FPS, pg.KEYDOWN, 'gen', 'gen')
 
 
 def generate_level(value_of_grass, value_of_stones):  # генерация уровня
@@ -533,7 +534,7 @@ while running:
             if 'pos' in login_or_inform and autorization:
                 data1[3] = login_or_inform
             if 'info' in login_or_inform:
-                players_stat = [[player0.mail, player0.stat] for player0 in players]
+                players_stat = [[player0.mail, player0.nickname, player0.stat] for player0 in players]
                 new_socket.send(json.dumps(players_stat).encode())
             if 'exit' in login_or_inform:
                 print(login_or_inform['exit'])
@@ -550,7 +551,7 @@ while running:
         if player_info != None:  # получение информации от пользователей и иx обработка
             if id not in players_inf:  # создание танка, если он отсутствует в списке
                 players_inf[id] = Tank(player_info['pos'], 90, id, [pg.K_w, pg.K_d, pg.K_s, pg.K_a],
-                                        RELOAD * FPS, pg.KEYDOWN, login)
+                                        RELOAD * FPS, pg.KEYDOWN, login, nickname)
             players_inf[id].velocity = player_info['velocity']  # иначе - применение переданных данных об игроке
             players_inf[id].rotate(player_info['angle'])
             players_inf[id].rect.center = player_info['pos']

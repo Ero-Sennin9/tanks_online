@@ -8,6 +8,11 @@ if (window.location.href.indexOf('reload')==-1) {
 </script>
     <h1>Авторизация</h1>
     <form action="" method="post">
+        {% if message %}
+        <div class="alert alert-danger" role="alert">
+        {{ message }}
+        </div>
+        {% endif %}
         {{ form.hidden_tag() }}
         <p>
             {{ form.email.label }}<br>
@@ -29,6 +34,5 @@ if (window.location.href.indexOf('reload')==-1) {
         </p>
         <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
         <p>{{ form.submit(type="submit", class="btn btn-primary") }}</p>
-        <div>{{ message }}</div>
     </form>
 {% endblock %}
