@@ -44,7 +44,7 @@ class Example(QMainWindow, Ui_MainWindow):
         self.label_3.setOpenExternalLinks(True)
         self.pushButton.clicked.connect(self.act)
         self.checkBox_3.stateChanged.connect(self.act2)
-        self.lineEdit_2.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.lineEdit_2.setEchoMode(QtWidgets.QLinewaEdit.Password)
         remember_info = {}
         with open('remember.txt', mode='rt') as file:
             try:
