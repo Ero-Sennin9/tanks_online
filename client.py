@@ -62,7 +62,6 @@ class Example(QMainWindow, Ui_MainWindow):
                                   'login': self.lineEdit.text()}).encode())
             try:
                 info_start = json.loads(sock.recv(2 ** 20).decode())
-                sleep(0.5)
             except Exception:
                 info_start = {}
 
@@ -502,7 +501,9 @@ class Patron(pg.sprite.Sprite):
                         self.number1 += 1
                         if dam >= 20:  # попадание по танку
                             boom_sound = boom_sound2 if random.randint(1, 2) == 2 else boom_sound3
-                            elem.boom_sounds.queue(boom_sound1), elem.boom_sounds.queue(boom_sound)  # звук взрыва
+                            elem.boom_sounds.queue(boom_sound1)
+                            if elem.player == player_main.player:
+                                elem.boom_sounds.queue(boom_sound)  # звук взрыва
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
                             if random.randint(1, 10) == 1:  # c небольшой вероятностью вызывается пожар
@@ -512,7 +513,9 @@ class Patron(pg.sprite.Sprite):
                                 elem.time_delete_fire = 0
 
                         else:  # если произошел рикошет - меняем направление пули
-                            elem.rik_sounds.queue(rik_sound1), elem.rik_sounds.queue(rik_sound2)  # звук рикошета
+                            elem.rik_sounds.queue(rik_sound1)
+                            if elem.player == player_main.player:
+                                elem.rik_sounds.queue(rik_sound2)  # звук рикошета
 
                             angle = self.angle_rik[self.number2 % 4]
                             self.number2 += 1
