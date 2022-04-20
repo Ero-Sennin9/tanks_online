@@ -45,6 +45,7 @@ class Example(QMainWindow, Ui_MainWindow):
         self.pushButton.clicked.connect(self.act)
         self.checkBox_3.stateChanged.connect(self.act2)
         self.lineEdit_2.setEchoMode(QtWidgets.QLineEdit.Password)
+        self.setWindowIcon("pictures/tank2.png")
         remember_info = {}
         with open('remember.txt', mode='rt') as file:
             try:
@@ -128,6 +129,9 @@ os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
 os.environ['SDL_VIDEO_CENTERED'] = '0'
 pg.init()
 screen = pg.Surface(SIZE)
+programIcon = pygame.image.load('pictures/tank2.png')
+
+pygame.display.set_icon(programIcon)
 # screen2 = pg.display.set_mode(SIZE_WINDOW)
 SIZE_WINDOW = (GetSystemMetrics(0) / 2, GetSystemMetrics(1) / 2)
 screen2 = pygame.display.set_mode(SIZE_WINDOW)
@@ -502,7 +506,7 @@ class Patron(pg.sprite.Sprite):
                         if dam >= 20:  # попадание по танку
                             boom_sound = boom_sound2 if random.randint(1, 2) == 2 else boom_sound3
                             elem.boom_sounds.queue(boom_sound1)
-                            if elem.player == player_main.player:
+                            if self.player_id == player_main.player:
                                 elem.boom_sounds.queue(boom_sound)  # звук взрыва
                             Boom(*self.rect.center)  # взрыв пули
                             self.kill()  # уничтожение пули
@@ -514,7 +518,7 @@ class Patron(pg.sprite.Sprite):
 
                         else:  # если произошел рикошет - меняем направление пули
                             elem.rik_sounds.queue(rik_sound1)
-                            if elem.player == player_main.player:
+                            if self.player_id == player_main.player:
                                 elem.rik_sounds.queue(rik_sound2)  # звук рикошета
 
                             angle = self.angle_rik[self.number2 % 4]
