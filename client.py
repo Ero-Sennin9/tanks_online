@@ -4,6 +4,7 @@ import math, random
 import pygame
 import json
 import pygame as pg
+from PyQt5.QtGui import QIcon
 from win32api import GetSystemMetrics
 from time import sleep
 from requests import get
@@ -45,7 +46,7 @@ class Example(QMainWindow, Ui_MainWindow):
         self.pushButton.clicked.connect(self.act)
         self.checkBox_3.stateChanged.connect(self.act2)
         self.lineEdit_2.setEchoMode(QtWidgets.QLineEdit.Password)
-        self.setWindowIcon("pictures/tank2.png")
+        self.setWindowIcon(QIcon("pictures/tank2.png"))
         remember_info = {}
         with open('remember.txt', mode='rt') as file:
             try:
@@ -129,12 +130,11 @@ os.environ['SDL_VIDEO_WINDOW_POS'] = "%d,%d" % (x, y)
 os.environ['SDL_VIDEO_CENTERED'] = '0'
 pg.init()
 screen = pg.Surface(SIZE)
-programIcon = pygame.image.load('pictures/tank2.png')
-
-pygame.display.set_icon(programIcon)
 # screen2 = pg.display.set_mode(SIZE_WINDOW)
 SIZE_WINDOW = (GetSystemMetrics(0) / 2, GetSystemMetrics(1) / 2)
 screen2 = pygame.display.set_mode(SIZE_WINDOW)
+icon = pygame.image.load(os.path.join('pictures', 'tank2.png'))
+pygame.display.set_icon(icon)
 
 
 pg.display.set_caption('Tanks_online(epic)')
